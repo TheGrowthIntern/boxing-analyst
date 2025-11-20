@@ -23,4 +23,4 @@
 - `RAPIDAPI_KEY`: Your RapidAPI key.
 - `GROQ_API_KEY`: Your Groq API key.
 - `GROQ_COMPOUND_MODEL`: Model name (default: `compound`).
-# boxing-analyst
+
