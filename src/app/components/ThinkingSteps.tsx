@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import LoadingDots from './LoadingDots';
-import { Search, User, Brain, MessageSquare } from 'lucide-react';
 
 interface ThinkingStepsProps {
   isSearching: boolean;
@@ -14,7 +13,6 @@ interface ThinkingStepsProps {
 type Step = {
   id: string;
   label: string;
-  icon: React.ReactNode;
   status: 'pending' | 'active' | 'complete';
 };
 
@@ -25,23 +23,23 @@ export default function ThinkingSteps({ isSearching, isAnalyzing, isThinking, fi
   useEffect(() => {
     if (isSearching) {
       setSteps([
-        { id: 'search', label: 'Searching database', icon: <Search className="h-3.5 w-3.5" />, status: 'active' },
-        { id: 'match', label: 'Finding matches', icon: <User className="h-3.5 w-3.5" />, status: 'pending' },
+        { id: 'search', label: 'Searching database', status: 'active' },
+        { id: 'match', label: 'Finding matches', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else if (isAnalyzing) {
       setSteps([
-        { id: 'fetch', label: `Loading ${fighterName || 'fighter'}`, icon: <User className="h-3.5 w-3.5" />, status: 'active' },
-        { id: 'fights', label: 'Fetching fight history', icon: <Search className="h-3.5 w-3.5" />, status: 'pending' },
-        { id: 'analyze', label: 'Generating analysis', icon: <Brain className="h-3.5 w-3.5" />, status: 'pending' },
+        { id: 'fetch', label: `Loading ${fighterName || 'fighter'}`, status: 'active' },
+        { id: 'fights', label: 'Fetching fight history', status: 'pending' },
+        { id: 'analyze', label: 'Generating analysis', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else if (isThinking) {
       setSteps([
-        { id: 'context', label: 'Reading context', icon: <User className="h-3.5 w-3.5" />, status: 'active' },
-        { id: 'search', label: 'Searching sources', icon: <Search className="h-3.5 w-3.5" />, status: 'pending' },
-        { id: 'analyze', label: 'Analyzing data', icon: <Brain className="h-3.5 w-3.5" />, status: 'pending' },
-        { id: 'compose', label: 'Composing response', icon: <MessageSquare className="h-3.5 w-3.5" />, status: 'pending' },
+        { id: 'context', label: 'Reading context', status: 'active' },
+        { id: 'search', label: 'Searching sources', status: 'pending' },
+        { id: 'analyze', label: 'Analyzing data', status: 'pending' },
+        { id: 'compose', label: 'Composing response', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else {
@@ -81,25 +79,17 @@ export default function ThinkingSteps({ isSearching, isAnalyzing, isThinking, fi
     <div className="space-y-2">
       <span className="text-[13px] font-medium text-[var(--primary)]">Mayweather</span>
       
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {steps.map((step) => (
-          <div key={step.id} className="flex items-center gap-3">
-            <div className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+          <div key={step.id} className="flex items-center gap-2">
+            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${
               step.status === 'active' 
-                ? 'bg-[var(--primary)]/10 text-[var(--primary)]' 
+                ? 'bg-[var(--primary)]' 
                 : step.status === 'complete'
-                ? 'bg-green-100 text-green-600'
-                : 'bg-[var(--neutral-100)] text-[var(--neutral-400)]'
-            }`}>
-              {step.status === 'complete' ? (
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                step.icon
-              )}
-            </div>
-            <span className={`text-[13px] ${
+                ? 'bg-green-500'
+                : 'bg-[var(--neutral-300)]'
+            }`} />
+            <span className={`text-[14px] ${
               step.status === 'active'
                 ? 'text-[var(--foreground)]'
                 : step.status === 'complete'
