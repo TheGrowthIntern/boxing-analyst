@@ -1,5 +1,6 @@
 export interface Division {
   name?: string;
+  id?: string | number;
 }
 
 export interface Fighter {
@@ -19,20 +20,33 @@ export interface Fighter {
   losses?: number;
   draws?: number;
   knockouts?: number;
-  imageUrl?: string; // Optional additions
+  ko_percentage?: number;
+  debut?: string;
+  alias?: string;
+  residence?: string;
+  imageUrl?: string;
+  // Additional fields that might come from API
+  sex?: string;
+  titles?: string[];
+  ranking?: number;
+  status?: string;
 }
 
 export interface Fight {
   id: string | number;
   date: string;
   division?: Division;
-  opponent: Fighter; // or string if simplistic
-  result: 'win' | 'loss' | 'draw' | 'nc';
+  opponent: Fighter | string;
+  result: 'win' | 'loss' | 'draw' | 'nc' | string;
   method?: string;
   round?: number;
+  scheduled_rounds?: number;
   time?: string;
   notes?: string;
   venue?: string;
+  location?: string;
+  title_fight?: boolean;
+  weight_class?: string;
 }
 
 export interface Analysis {

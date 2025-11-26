@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  /* Color Palette */
-  --background: #ffffff;
-  --foreground: #000000;
+  /* Light Sand Palette */
+  --background: #f8f6f1;
+  --foreground: #1a1a1a;
+  --surface: #ffffff;
+  --surface-muted: #f3f1ec;
   
-  /* Primary Brand Colors */
-  --primary-orange: #f43e01;
-  --primary-orange-dark: #c23101;
-  --accent-orange: #fe9e20;
-  --accent-peach: #ffd1a3;
-  --accent-light: #f3f3ee;
+  /* Brand */
+  --primary: #e84c30;
+  --primary-dark: #d13d24;
   
-  /* Neutral Grays */
-  --gray-light: #cececbf;
-  --gray-medium: #69695d;
-  --gray-dark: #2d2f33;
-  --gray-darker: #26292e;
+  /* Neutrals */
+  --neutral-50: #faf9f7;
+  --neutral-100: #f5f3ef;
+  --neutral-200: #e8e6e1;
+  --neutral-300: #d4d2cd;
+  --neutral-400: #a8a6a1;
+  --neutral-500: #6b6965;
+  --neutral-600: #4a4845;
+  --neutral-700: #2d2b28;
+  --neutral-800: #1a1917;
+  --neutral-900: #0d0c0b;
 }
 
 @theme inline {
@@ -24,22 +29,79 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
-  /* Custom color tokens */
-  --color-primary: var(--primary-orange);
-  --color-primary-dark: var(--primary-orange-dark);
-  --color-accent: var(--accent-orange);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #ffffff;
-  }
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-400);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s ease-in-out infinite;
 }

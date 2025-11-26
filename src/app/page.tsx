@@ -1,53 +1,27 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { Fighter, Fight, Analysis } from '@/lib/types';
-import clsx from 'clsx';
+import Header from './components/Header';
+import ChatMessage, { type ChatMessage as ChatMessageType } from './components/ChatMessage';
+import ChatInput from './components/ChatInput';
+import ThinkingSteps from './components/ThinkingSteps';
+import { ChevronDown, ExternalLink } from 'lucide-react';
 
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  meta?: {
-    searchResults?: Fighter[];
-    fighter?: Fighter;
-    fights?: Fight[];
-    insights?: Analysis | null;
-    sources?: { label: string; url: string }[];
-  };
-};
-
-const questionKeywords = [
-  'how',
-  'what',
-  'why',
-  'when',
-  'where',
-  'should',
-  'can',
-  'does',
-  'do',
-  'is',
-  'are',
-  'tell',
-  'give',
-  'compare',
-  'rate',
-  'versus',
-  'vs',
+const FAMOUS_BOXERS = [
+  'Muhammad Ali', 'Mike Tyson', 'Floyd Mayweather', 'Manny Pacquiao',
+  'Sugar Ray Leonard', 'Oscar De La Hoya', 'Canelo Alvarez', 'Anthony Joshua',
+  'Tyson Fury', 'Deontay Wilder', 'Lennox Lewis', 'Evander Holyfield',
+  'George Foreman', 'Joe Frazier', 'Larry Holmes', 'Roy Jones Jr',
+  'Bernard Hopkins', 'Shane Mosley', 'Julio Cesar Chavez', 'Roberto Duran',
+  'Marvin Hagler', 'Thomas Hearns', 'Gennady Golovkin', 'Terence Crawford',
+  'Errol Spence Jr', 'Naoya Inoue', 'Oleksandr Usyk', 'Vasyl Lomachenko',
+  'Ryan Garcia', 'Shakur Stevenson', 'Tank Davis', 'Jake Paul'
 ];
 
-const renderFightBadge = (result: Fight['result']) =>
-  clsx(
-    'px-3 py-0.5 rounded-full text-[11px] font-semibold uppercase',
-    result === 'win' && 'bg-[var(--accent-orange)] text-white',
-    result === 'loss' && 'bg-[var(--primary-orange)] text-white',
-    result === 'draw' && 'bg-[var(--gray-light)] text-[#000]',
-    result === 'nc' && 'bg-[var(--gray-medium)] text-white',
-  );
-
 export default function Home() {
+  const [hasEntered, setHasEntered] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedFighter, setSelectedFighter] = useState<Fighter | null>(null);
@@ -55,15 +29,53 @@ export default function Home() {
   const [insights, setInsights] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState('');
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
+  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Compound Beta is ready. Type a fighter name to pull up stats.',
+      content: 'Search for any boxer to explore their stats, fight history, and AI-powered analysis.',
     },
   ]);
   const chatAreaRef = useRef<HTMLDivElement | null>(null);
   const [isCompoundLoading, setIsCompoundLoading] = useState(false);
+
+  // Scroll detection with animation
+  useEffect(() => {
+    if (hasEntered) return;
+
+    let accumulatedScroll = 0;
+    const threshold = 150;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY > 0) {
+        accumulatedScroll += e.deltaY;
+        const progress = Math.min(accumulatedScroll / threshold, 1);
+        setScrollProgress(progress);
+        
+        if (progress >= 1) {
+          setHasEntered(true);
+        }
+      } else {
+        accumulatedScroll = Math.max(0, accumulatedScroll + e.deltaY);
+        setScrollProgress(Math.min(accumulatedScroll / threshold, 1));
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter') {
+        setScrollProgress(1);
+        setTimeout(() => setHasEntered(true), 200);
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hasEntered]);
 
   useEffect(() => {
     if (chatAreaRef.current) {
@@ -71,8 +83,8 @@ export default function Home() {
     }
   }, [chatHistory, isSearching, isAnalyzing, isCompoundLoading]);
 
-  const appendMessage = (message: ChatMessage) => {
-    setChatHistory((prev) => [...prev, message]);
+  const appendMessage = (message: ChatMessageType) => {
+    setChatHistory((prev: ChatMessageType[]) => [...prev, message]);
   };
 
   const performSearch = async (searchTerm: string) => {
@@ -96,8 +108,8 @@ export default function Home() {
         id: `search-res-${Date.now()}`,
         role: 'assistant',
         content: fighters.length
-          ? `I found ${fighters.length} match${fighters.length === 1 ? '' : 'es'} for "${searchTerm}". Tap one to load the profile card.`
-          : `No one matched "${searchTerm}". Try another name or spelling.`,
+          ? `Found ${fighters.length} match${fighters.length === 1 ? '' : 'es'} for "${searchTerm}".`
+          : `No results for "${searchTerm}". Try another name.`,
         meta: { searchResults: fighters },
       });
     } catch (err) {
@@ -105,7 +117,7 @@ export default function Home() {
       appendMessage({
         id: `search-error-${Date.now()}`,
         role: 'assistant',
-        content: 'Compound Beta hit a snag fetching fighters—give it another try.',
+        content: 'Something went wrong. Please try again.',
       });
       console.error(err);
     } finally {
@@ -133,9 +145,9 @@ export default function Home() {
         body: JSON.stringify({ fighterId: fighter.id }),
       });
       const data = await res.json();
-
+      
       if (data.error) throw new Error(data.error);
-
+      
       const profile: Fighter = data.fighter || fighter;
       setSelectedFighter(profile);
       setRecentFights(data.fights || []);
@@ -144,7 +156,7 @@ export default function Home() {
       appendMessage({
         id: `profile-${fighter.id}-${Date.now()}`,
         role: 'assistant',
-        content: `Compound Beta loaded the profile for ${profile.name}.`,
+        content: `Here's the complete profile for ${profile.name}.`,
         meta: {
           fighter: profile,
           fights: data.fights || [],
@@ -156,7 +168,7 @@ export default function Home() {
       appendMessage({
         id: `profile-error-${fighter.id}-${Date.now()}`,
         role: 'assistant',
-        content: 'Compound Beta could not retrieve the fighter profile. Try another selection.',
+        content: 'Could not load fighter profile. Try another selection.',
       });
       console.error(err);
     } finally {
@@ -184,7 +196,7 @@ export default function Home() {
       appendMessage({
         id: `compound-res-${Date.now()}`,
         role: 'assistant',
-        content: data.answer || 'Compound Beta could not answer that right now.',
+        content: data.answer || 'Could not generate an answer.',
         meta: {
           sources: data.sources,
         },
@@ -193,14 +205,15 @@ export default function Home() {
       appendMessage({
         id: `compound-error-${Date.now()}`,
         role: 'assistant',
-        content: 'Compound Beta could not process the follow-up question. Try again shortly.',
+        content: 'Could not process your question. Try again.',
       });
       console.error(err);
     } finally {
       setIsCompoundLoading(false);
     }
   };
-  const handleSend = async (e: React.FormEvent) => {
+
+  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = inputValue.trim();
     if (!trimmed) return;
@@ -212,215 +225,169 @@ export default function Home() {
       content: trimmed,
     });
 
-    const hasQuestionMark = trimmed.includes('?');
-    const normalized = trimmed.toLowerCase();
-    const startsWithKeyword = questionKeywords.some(
-      (keyword) => normalized === keyword || normalized.startsWith(`${keyword} `),
-    );
-    const isQuestionIntent = hasQuestionMark || startsWithKeyword;
-
-    if (selectedFighter && isQuestionIntent) {
+    if (selectedFighter) {
       await sendCompoundQuestion(trimmed);
     } else {
       await performSearch(trimmed);
     }
   };
 
-  const statusLabel = isSearching
-    ? 'Searching for fighters…'
-    : isAnalyzing
-    ? 'Analyzing fighter data…'
-    : isCompoundLoading
-    ? 'Compound Beta is crafting a response…'
-    : 'Type a fighter name or ask a question after selecting one';
+  const handleNewSearch = () => {
+    setSelectedFighter(null);
+    setRecentFights([]);
+    setInsights(null);
+    setError('');
+    appendMessage({
+      id: `new-search-${Date.now()}`,
+      role: 'assistant',
+      content: 'Ready for a new search.',
+    });
+  };
 
-  return (
-    //main container
-    <main className="flex min-h-screen flex-col bg-gradient-to-b from-[#fff4ec] via-[#fff8f2] to-[#ffffff] font-[var(--font-geist-sans)] text-[var(--foreground)]">
-      <div className="flex-1 px-4 py-10 md:px-8">
-        <div className="mx-auto flex max-w-[1100px] flex-col gap-8 rounded-[14px] border border-[var(--gray-light)] bg-white/70 px-6 py-8 shadow-lg shadow-[#000]/10 backdrop-blur-sm">
-          <header className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.6em] text-[var(--primary-orange)]">Groq Compound Beta</p>
-            <h1 className="text-4xl font-black text-[var(--foreground)]">Boxing Analyst Chat</h1>
-            <p className="text-sm text-[var(--gray-dark)]">
-              Search by typing a fighter's name and pick the correct profile. Compound Beta responds directly within this room while leaving plenty of white space for the chat.
+  const handleRandomFighter = async () => {
+    if (!hasEntered) {
+      setScrollProgress(1);
+      setTimeout(() => setHasEntered(true), 200);
+    }
+    
+    const randomName = FAMOUS_BOXERS[Math.floor(Math.random() * FAMOUS_BOXERS.length)];
+    
+    setTimeout(async () => {
+      appendMessage({
+        id: `random-user-${Date.now()}`,
+        role: 'user',
+        content: `Surprise me`,
+      });
+
+      appendMessage({
+        id: `random-pick-${Date.now()}`,
+        role: 'assistant',
+        content: `Let's explore **${randomName}**...`,
+      });
+
+      await performSearch(randomName);
+    }, hasEntered ? 0 : 250);
+  };
+
+  const isLoading = isSearching || isAnalyzing || isCompoundLoading;
+
+  // Landing Screen with scroll animation
+  if (!hasEntered) {
+    return (
+      <main className="flex min-h-screen flex-col bg-[var(--background)] overflow-hidden">
+        {/* Try Groq pill */}
+        <div className="absolute right-6 top-6 z-10">
+          <a
+            href="https://console.groq.com/playground"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full border border-[var(--neutral-200)] bg-[var(--surface)] px-4 py-2 text-[13px] font-medium text-[var(--neutral-600)] transition-all hover:border-[var(--neutral-300)] hover:bg-[var(--surface-muted)]"
+          >
+            Try Groq
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        {/* Landing content with scroll animation */}
+        <div 
+          className="flex flex-1 flex-col items-center justify-center px-6 transition-all duration-300 ease-out"
+          style={{
+            transform: `translateY(-${scrollProgress * 30}px) scale(${1 - scrollProgress * 0.05})`,
+            opacity: 1 - scrollProgress * 0.5,
+          }}
+        >
+          <div className="flex flex-col items-center text-center">
+            {/* Title */}
+            <h1 
+              className="animate-fade-in-up text-[48px] font-bold leading-tight tracking-tight text-[var(--foreground)] md:text-[64px]"
+              style={{ animationDelay: '0s', opacity: 0 }}
+            >
+              Mayweather
+            </h1>
+            
+            {/* Subtitle */}
+            <p 
+              className="animate-fade-in-up mt-4 max-w-md text-[17px] leading-relaxed text-[var(--neutral-500)]"
+              style={{ animationDelay: '0.1s', opacity: 0 }}
+            >
+              AI-powered boxing intelligence.<br />
+              Powered by Groq.
             </p>
-            <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gray-medium)]">{statusLabel}</p>
-            {error && (
-              <div className="rounded-lg border border-[var(--primary-orange)] bg-[var(--accent-peach)]/60 px-4 py-2 text-sm text-[var(--primary-orange)] shadow-inner">
-                {error}
-              </div>
-            )}
-            </header>
-          <div className="flex min-h-0 flex-1 flex-col rounded-[12px] border border-[var(--gray-light)] bg-white/80">       
-            <div ref={chatAreaRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-5 pb-4">
-                {chatHistory.map((message) => {
-                  const isUser = message.role === 'user';
-                  return (
-                    <div
-                      key={message.id}
-                    className={clsx('space-y-2 rounded-lg border px-4 py-3', {
-                        'border-[var(--primary-orange)] bg-[var(--accent-peach)] text-[var(--primary-orange)]': isUser,
-                        'border-[var(--gray-light)] bg-white text-[var(--foreground)]': !isUser,
-                      })}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gray-medium)]">
-                        {isUser ? 'You' : 'Compound Beta'}
-                      </p>
-                      <p className="text-sm leading-relaxed">{message.content}</p>
 
-                      {message.meta?.searchResults && message.meta.searchResults.length > 0 && (
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {message.meta.searchResults.slice(0, 4).map((fighter) => (
-                            <button
-                              key={`search-${fighter.id}`}
-                              onClick={() => handleSelectFighter(fighter)}
-                              className="flex items-center justify-between rounded-xl border border-[var(--gray-light)] bg-[var(--accent-light)] px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary-orange)]"
-                            >
-                              <span>
-                                {fighter.name}
-                                <span className="block text-[11px] font-normal text-[var(--gray-dark)]">
-                                  {fighter.nationality} {fighter.division?.name ? `• ${fighter.division.name}` : ''}
-                                </span>
-                              </span>
-                              <span className="text-[11px] uppercase tracking-[0.3em] text-[var(--primary-orange)]">Select</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    {message.meta?.fighter && (
-                      <div className="space-y-3 rounded-xl border border-[var(--gray-light)] bg-[var(--accent-light)] px-4 py-3 text-sm text-[var(--foreground)]">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-[var(--foreground)]">{message.meta.fighter.name}</p>
-                            <p className="text-[11px] text-[var(--gray-medium)]">
-                              {message.meta.fighter.nationality} {message.meta.fighter.division?.name ?? ''}
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-[var(--gray-light)] px-3 py-1 text-[11px] font-semibold text-[var(--primary-orange)]">
-                            {message.meta.fighter.record || 'Record N/A'}
-                          </span>
-                        </div>
-                        <div className="grid gap-3 text-[11px] text-[var(--gray-dark)] md:grid-cols-3">
-                          <div>
-                            <p className="uppercase tracking-[0.3em]">Height</p>
-                            <p className="font-semibold text-[var(--foreground)]">{message.meta.fighter.height || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="uppercase tracking-[0.3em]">Reach</p>
-                            <p className="font-semibold text-[var(--foreground)]">{message.meta.fighter.reach || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="uppercase tracking-[0.3em]">Stance</p>
-                            <p className="font-semibold text-[var(--foreground)]">{message.meta.fighter.stance || '-'}</p>
-                          </div>
-                        </div>
-                        {message.meta.fights && message.meta.fights.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--gray-medium)]">Recent fights</p>
-                            {message.meta.fights.slice(0, 3).map((fight) => (
-                              <div key={`fight-${fight.id}`} className="flex items-center justify-between text-[12px]">
-                                <div>
-                                  <p className="font-semibold text-[var(--foreground)]">
-                                    vs {typeof fight.opponent === 'string' ? fight.opponent : fight.opponent?.name}
-                                  </p>
-                                  <p className="text-[11px] text-[var(--gray-medium)]">
-                                    {fight.date} • {fight.method || 'Method N/A'}
-                                  </p>
-                                </div>
-                                <span className={renderFightBadge(fight.result)}>{fight.result}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {message.meta.insights && (
-                          <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--gray-medium)]">AI insights</p>
-                            <p className="text-[12px] text-[var(--foreground)]">{message.meta.insights.summary}</p>
-                            <div className="grid gap-3 text-[12px] text-[var(--gray-dark)] md:grid-cols-2">
-                              <div>
-                                <p className="uppercase tracking-[0.3em]">Strengths</p>
-                                <ul className="space-y-1">
-                                  {message.meta.insights.strengths?.length ? (
-                                    message.meta.insights.strengths.map((strength, index) => (
-                                      <li key={`strength-${index}`}>• {strength}</li>
-                                    ))
-                                  ) : (
-                                    <li>Not listed</li>
-                                  )}
-                                </ul>
-                              </div>
-                              <div>
-                                <p className="uppercase tracking-[0.3em]">Weaknesses</p>
-                                <ul className="space-y-1">
-                                  {message.meta.insights.weaknesses?.length ? (
-                                    message.meta.insights.weaknesses.map((weakness, index) => (
-                                      <li key={`weakness-${index}`}>• {weakness}</li>
-                                    ))
-                                  ) : (
-                                    <li>Not listed</li>
-                                  )}
-                                </ul>
-                              </div>
-                            </div>
-                            <div className="grid gap-3 text-[12px] text-[var(--gray-dark)] md:grid-cols-2">
-                              <div>
-                                <p className="font-semibold text-[var(--foreground)]">Style</p>
-                                <p>{message.meta.insights.style || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold text-[var(--foreground)]">Strategic notes</p>
-                                <p>{message.meta.insights.matchups || 'N/A'}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {message.meta?.sources && message.meta.sources.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {message.meta.sources.map((source, idx) => (
-                          <a
-                            key={`source-${idx}`}
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-full border border-[var(--gray-light)] bg-[var(--accent-peach)] px-3 py-1 text-[11px] font-semibold text-[var(--primary-orange)] transition hover:bg-[var(--primary-orange)] hover:text-white"
-                          >
-                            {source.label}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Scroll indicator */}
+            <div 
+              className="animate-fade-in-up mt-20 flex flex-col items-center gap-2"
+              style={{ animationDelay: '0.3s', opacity: 0 }}
+            >
+              <span className="text-[12px] font-medium uppercase tracking-widest text-[var(--neutral-400)]">
+                Scroll to begin
+              </span>
+              <ChevronDown 
+                className="animate-bounce-slow h-5 w-5 text-[var(--neutral-400)]" 
+                style={{ 
+                  transform: `translateY(${scrollProgress * 10}px)`,
+                  opacity: 1 - scrollProgress 
+                }}
+              />
             </div>
-            <form onSubmit={handleSend} className="border-t border-[var(--gray-light)] px-5 py-4">
-              <p className="mb-3 text-xs uppercase tracking-[0.5em] text-[var(--gray-medium)]">Ask Compound Beta</p>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Type a fighter name or ask Compound Beta a question"
-                  className="flex-1 rounded-lg border border-[var(--gray-light)] px-4 py-3 text-sm focus:border-[var(--primary-orange)] focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isSearching || (isAnalyzing && !selectedFighter)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--primary-orange)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--primary-orange-dark)] disabled:opacity-60"
-                >
-                  <Search className="h-4 w-4" />
-                  Send
-                </button>
-              </div>
-              <p className="mt-2 text-[11px] text-[var(--gray-medium)]">
-                Add a question mark or "how/what/why" to shift Compound Beta into analysis mode after a fighter is selected.
-              </p>
-            </form>
           </div>
         </div>
+
+        {/* Progress bar at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--neutral-100)]">
+          <div 
+            className="h-full bg-[var(--primary)] transition-all duration-100"
+            style={{ width: `${scrollProgress * 100}%` }}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // Chat Interface
+  return (
+    <main className="flex h-screen flex-col bg-[var(--background)] animate-fade-in">
+      <Header 
+        error={error} 
+        selectedFighter={selectedFighter}
+        onNewSearch={handleNewSearch}
+      />
+      
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Chat area */}
+        <div ref={chatAreaRef} className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-8">
+          <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
+            {chatHistory.map((message, index) => (
+              <div 
+                key={message.id} 
+                className="animate-slide-in"
+                style={{ animationDelay: `${Math.min(index * 30, 150)}ms`, opacity: 0 }}
+              >
+                <ChatMessage message={message} onSelectFighter={handleSelectFighter} />
+              </div>
+            ))}
+            {isLoading && (
+              <div className="animate-fade-in">
+                <ThinkingSteps
+                  isSearching={isSearching}
+                  isAnalyzing={isAnalyzing}
+                  isThinking={isCompoundLoading}
+                  fighterName={selectedFighter?.name}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <ChatInput
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          onSubmit={handleSend}
+          disabled={isLoading}
+          selectedFighter={selectedFighter}
+          onNewSearch={handleNewSearch}
+          onRandomFighter={handleRandomFighter}
+        />
       </div>
     </main>
   );
