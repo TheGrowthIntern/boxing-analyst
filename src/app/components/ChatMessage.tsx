@@ -25,20 +25,24 @@ interface ChatMessageProps {
 export default function ChatMessage({ message, onSelectFighter }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[80%] rounded-2xl bg-[var(--primary)] px-4 py-2.5">
+          <p className="text-[14px] leading-relaxed text-white">{message.content}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2">
-      <span className={`text-[13px] font-medium ${
-        isUser ? 'text-[var(--neutral-500)]' : 'text-[var(--primary)]'
-      }`}>
-        {isUser ? 'You' : 'Mayweather'}
+    <div>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--primary)] mb-1 block">
+        The Bottom Line
       </span>
       
-      <div>
-        {isUser ? (
-          <p className="text-[15px] leading-relaxed text-[var(--foreground)]">{message.content}</p>
-        ) : (
-          <MarkdownText content={message.content} />
-        )}
+      <div className="rounded-2xl border border-[var(--neutral-200)] bg-white px-4 py-3">
+        <MarkdownText content={message.content} />
 
         {message.meta?.searchResults && message.meta.searchResults.length > 0 && (
           <SearchResults fighters={message.meta.searchResults} onSelectFighter={onSelectFighter} />

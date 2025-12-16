@@ -25,6 +25,7 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedFighter, setSelectedFighter] = useState<Fighter | null>(null);
+  const [contextFighter, setContextFighter] = useState<Fighter | null>(null);
   const [recentFights, setRecentFights] = useState<Fight[]>([]);
   const [insights, setInsights] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -37,9 +38,12 @@ export default function Home() {
     },
   ]);
   const chatAreaRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const [isCompoundLoading, setIsCompoundLoading] = useState(false);
+  const isInitialState =
+    chatHistory.length <= 1 && !selectedFighter && !isSearching && !isAnalyzing && !isCompoundLoading;
 
-  // Scroll detection with animation
+  // Scroll detection with animation for landing page
   useEffect(() => {
     if (hasEntered) return;
 
@@ -77,10 +81,14 @@ export default function Home() {
     };
   }, [hasEntered]);
 
+  // Scroll to bottom as messages stream in
   useEffect(() => {
-    if (chatAreaRef.current) {
-      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
-    }
+    const scrollToBottom = () => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    // Small delay to ensure content is rendered
+    const timer = setTimeout(scrollToBottom, 50);
+    return () => clearTimeout(timer);
   }, [chatHistory, isSearching, isAnalyzing, isCompoundLoading]);
 
   const appendMessage = (message: ChatMessageType) => {
@@ -133,6 +141,7 @@ export default function Home() {
     });
 
     setSelectedFighter(fighter);
+    setContextFighter(fighter);
     setIsAnalyzing(true);
     setError('');
     setRecentFights([]);
@@ -150,6 +159,7 @@ export default function Home() {
       
       const profile: Fighter = data.fighter || fighter;
       setSelectedFighter(profile);
+      setContextFighter(profile);
       setRecentFights(data.fights || []);
       setInsights(data.insights || null);
 
@@ -177,14 +187,15 @@ export default function Home() {
   };
 
   const sendCompoundQuestion = async (questionText: string) => {
-    if (!selectedFighter) return;
+    const targetFighter = selectedFighter || contextFighter;
+    if (!targetFighter) return;
     setIsCompoundLoading(true);
     try {
       const res = await fetch('/api/compound', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fighterId: selectedFighter.id,
+          fighterId: targetFighter.id,
           question: questionText,
         }),
       });
@@ -225,23 +236,66 @@ export default function Home() {
       content: trimmed,
     });
 
-    if (selectedFighter) {
+    if (selectedFighter || contextFighter) {
       await sendCompoundQuestion(trimmed);
-    } else {
-      await performSearch(trimmed);
+      return;
     }
+
+    // If no fighter context, decide between general Q&A and search
+    const lower = trimmed.toLowerCase();
+    const isGeneral =
+      /^(what|when|who|why|how|where|which|tell me|list|show|give|upcoming|next|schedule|groq|fight|fights)/i.test(
+        trimmed,
+      ) || lower.includes('groq') || lower.includes('fight');
+
+    if (isGeneral) {
+      setIsCompoundLoading(true);
+      try {
+        const res = await fetch('/api/compound/general', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: trimmed }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'General question failed');
+
+        appendMessage({
+          id: `general-res-${Date.now()}`,
+          role: 'assistant',
+          content: data.answer || 'Could not generate an answer.',
+          meta: { sources: data.sources },
+        });
+      } catch (err) {
+        appendMessage({
+          id: `general-error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Could not process your question. Try again.',
+        });
+        console.error(err);
+      } finally {
+        setIsCompoundLoading(false);
+      }
+      return;
+    }
+
+    // fallback to search by fighter name
+    await performSearch(trimmed);
   };
 
   const handleNewSearch = () => {
     setSelectedFighter(null);
+    setContextFighter(null);
     setRecentFights([]);
     setInsights(null);
     setError('');
-    appendMessage({
-      id: `new-search-${Date.now()}`,
-      role: 'assistant',
-      content: 'Ready for a new search.',
-    });
+    // Clear chat history and start fresh
+    setChatHistory([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Search for any boxer to explore their stats, fight history, and AI-powered analysis.',
+      },
+    ]);
   };
 
   const handleRandomFighter = async () => {
@@ -271,72 +325,161 @@ export default function Home() {
 
   const isLoading = isSearching || isAnalyzing || isCompoundLoading;
 
-  // Landing Screen with scroll animation
+  // ASCII Boxing Ring art - larger and more detailed
+  const asciiRing = `
+    ┌────────────────────────────────────────────────┐
+    │                                                │
+    │   ┌────────────────────────────────────────┐   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   │                                        │   │
+    │   ├────────────────────────────────────────┤   │
+    │   ├────────────────────────────────────────┤   │
+    │   ├────────────────────────────────────────┤   │
+    │   │                                        │   │
+    │   └────────────────────────────────────────┘   │
+    │                                                │
+    └────────────────────────────────────────────────┘
+  `;
+
+  // Landing Screen - Split layout with ASCII ring
   if (!hasEntered) {
     return (
-      <main className="flex min-h-screen flex-col bg-[var(--background)] overflow-hidden">
+      <main className="relative flex min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+        {/* Subtle texture background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[var(--background)]" />
+          {/* Dot grid texture */}
+          <div 
+            className="absolute inset-0 opacity-[0.35]"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 1px 1px, var(--neutral-300) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+          {/* Subtle red accent glow */}
+          <div 
+            className="absolute right-0 top-0 h-[600px] w-[600px] opacity-[0.04]"
+            style={{
+              background: 'radial-gradient(circle at 70% 30%, var(--ring-red), transparent 60%)',
+            }}
+          />
+        </div>
+
         {/* Try Groq pill */}
         <div className="absolute right-6 top-6 z-10">
           <a
             href="https://console.groq.com/playground"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-[var(--neutral-200)] bg-[var(--surface)] px-4 py-2 text-[13px] font-medium text-[var(--neutral-600)] transition-all hover:border-[var(--neutral-300)] hover:bg-[var(--surface-muted)]"
+            className="flex items-center gap-1.5 rounded-full border border-[var(--neutral-200)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--neutral-600)] transition-all hover:border-[var(--neutral-300)] hover:bg-[var(--neutral-50)]"
           >
             Try Groq
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
 
-        {/* Landing content with scroll animation */}
+        {/* Split screen container */}
         <div 
-          className="flex flex-1 flex-col items-center justify-center px-6 transition-all duration-300 ease-out"
+          className="relative z-10 flex w-full flex-col lg:flex-row transition-all duration-300 ease-out"
           style={{
-            transform: `translateY(-${scrollProgress * 30}px) scale(${1 - scrollProgress * 0.05})`,
+            transform: `translateY(-${scrollProgress * 40}px)`,
             opacity: 1 - scrollProgress * 0.5,
           }}
         >
-          <div className="flex flex-col items-center text-center">
-            {/* Title */}
-            <h1 
-              className="animate-fade-in-up text-[48px] font-bold leading-tight tracking-tight text-[var(--foreground)] md:text-[64px]"
+          {/* Left side - Text content */}
+          <div className="flex flex-1 flex-col justify-center px-8 py-16 md:px-16 lg:px-20 lg:py-0">
+            {/* The Ring logo */}
+            <div 
+              className="animate-fade-in-up mb-8"
               style={{ animationDelay: '0s', opacity: 0 }}
             >
-              Mayweather
+              <img 
+                src="/The_Ring_Logo.png" 
+                alt="The Ring" 
+                className="h-12 w-auto"
+              />
+            </div>
+
+            {/* Headline - Gothic font */}
+            <h1
+              className="animate-fade-in-up text-[48px] leading-[1] tracking-tight text-[var(--foreground)] md:text-[64px] lg:text-[80px]"
+              style={{ 
+                fontFamily: 'var(--font-gothic), serif',
+                animationDelay: '0.05s', 
+                opacity: 0 
+              }}
+            >
+              Boxing<br />Intelligence
             </h1>
-            
+
             {/* Subtitle */}
-            <p 
-              className="animate-fade-in-up mt-4 max-w-md text-[17px] leading-relaxed text-[var(--neutral-500)]"
+            <p
+              className="animate-fade-in-up mt-6 max-w-md text-[16px] leading-relaxed text-[var(--neutral-500)] md:text-[17px]"
               style={{ animationDelay: '0.1s', opacity: 0 }}
             >
-              AI-powered boxing intelligence.<br />
-              Powered by Groq.
+              Scout fighters, preview matchups, and get instant AI-powered analysis on any boxer in history.
             </p>
 
-            {/* Scroll indicator */}
-            <div 
-              className="animate-fade-in-up mt-20 flex flex-col items-center gap-2"
-              style={{ animationDelay: '0.3s', opacity: 0 }}
+            {/* Partnership line */}
+            <div
+              className="animate-fade-in-up mt-8 flex items-center gap-3 text-[13px] text-[var(--neutral-500)]"
+              style={{ animationDelay: '0.15s', opacity: 0 }}
             >
+              <span>Powered by</span>
+              <span className="font-semibold text-[var(--foreground)]">Groq</span>
+            </div>
+
+            {/* Scroll indicator */}
+            <div
+              className="animate-fade-in-up mt-16 flex items-center gap-3"
+              style={{ animationDelay: '0.2s', opacity: 0 }}
+            >
+              <div className="flex h-10 w-6 items-start justify-center rounded-full border border-[var(--neutral-300)] p-1.5">
+                <div 
+                  className="h-2 w-1 rounded-full bg-[var(--ring-red)] animate-bounce-slow"
+                />
+              </div>
               <span className="text-[12px] font-medium uppercase tracking-widest text-[var(--neutral-400)]">
-                Scroll to begin
+                Scroll to enter
               </span>
-              <ChevronDown 
-                className="animate-bounce-slow h-5 w-5 text-[var(--neutral-400)]" 
-                style={{ 
-                  transform: `translateY(${scrollProgress * 10}px)`,
-                  opacity: 1 - scrollProgress 
-                }}
-              />
+            </div>
+          </div>
+
+          {/* Right side - ASCII Ring */}
+          <div className="hidden md:flex flex-1 items-center justify-center px-8 lg:px-16">
+            <div 
+              className="animate-fade-in-up relative"
+              style={{ animationDelay: '0.15s', opacity: 0 }}
+            >
+              {/* ASCII Ring */}
+              <pre 
+                className="text-[11px] md:text-[13px] lg:text-[15px] leading-[1.5] text-[var(--neutral-300)] select-none whitespace-pre"
+                style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace' }}
+              >
+                {asciiRing}
+              </pre>
+              {/* Red accent on ropes - positioned over the horizontal lines */}
+              <div className="absolute inset-x-[20%] top-[58%] h-[2px] bg-[var(--ring-red)]/50 blur-[0.5px]" />
+              <div className="absolute inset-x-[20%] top-[62%] h-[2px] bg-[var(--ring-red)]/35 blur-[0.5px]" />
+              <div className="absolute inset-x-[20%] top-[66%] h-[2px] bg-[var(--ring-red)]/20 blur-[0.5px]" />
+              {/* Corner posts */}
+              <div className="absolute left-[18%] top-[25%] bottom-[20%] w-[3px] bg-[var(--ring-red)]/30 rounded-full" />
+              <div className="absolute right-[18%] top-[25%] bottom-[20%] w-[3px] bg-[var(--ring-red)]/30 rounded-full" />
             </div>
           </div>
         </div>
 
-        {/* Progress bar at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--neutral-100)]">
-          <div 
-            className="h-full bg-[var(--primary)] transition-all duration-100"
+        {/* Progress bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--neutral-200)]">
+          <div
+            className="h-full bg-[var(--ring-red)] transition-all duration-100"
             style={{ width: `${scrollProgress * 100}%` }}
           />
         </div>
@@ -346,17 +489,18 @@ export default function Home() {
 
   // Chat Interface
   return (
-    <main className="flex h-screen flex-col bg-[var(--background)] animate-fade-in">
-      <Header 
-        error={error} 
-        selectedFighter={selectedFighter}
-        onNewSearch={handleNewSearch}
-      />
+    <main className="flex h-screen flex-col bg-[var(--background)] animate-fade-in relative">
+      {/* Textured background */}
+      <div className="app-bg" />
+      <div className="app-grid" />
+      <div className="app-ropes" />
       
-      <div className="flex min-h-0 flex-1 flex-col">
+      <Header error={error} />
+      
+      <div className="flex min-h-0 flex-1 flex-col relative z-[1]">
         {/* Chat area */}
-        <div ref={chatAreaRef} className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-8">
-          <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
+        <div ref={chatAreaRef} className="chat-scroll flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
+          <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
             {chatHistory.map((message, index) => (
               <div 
                 key={message.id} 
@@ -364,8 +508,8 @@ export default function Home() {
                 style={{ animationDelay: `${Math.min(index * 30, 150)}ms`, opacity: 0 }}
               >
                 <ChatMessage message={message} onSelectFighter={handleSelectFighter} />
-              </div>
-            ))}
+                      </div>
+                    ))}
             {isLoading && (
               <div className="animate-fade-in">
                 <ThinkingSteps
@@ -374,8 +518,9 @@ export default function Home() {
                   isThinking={isCompoundLoading}
                   fighterName={selectedFighter?.name}
                 />
-              </div>
-            )}
+                  </div>
+                )}
+            <div ref={bottomRef} />
           </div>
         </div>
 
@@ -385,10 +530,12 @@ export default function Home() {
           onSubmit={handleSend}
           disabled={isLoading}
           selectedFighter={selectedFighter}
+          contextFighter={contextFighter}
           onNewSearch={handleNewSearch}
           onRandomFighter={handleRandomFighter}
+          isInitialState={isInitialState}
         />
-      </div>
-    </main>
+        </div>
+      </main>
   );
 }

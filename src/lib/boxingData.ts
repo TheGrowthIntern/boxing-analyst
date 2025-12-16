@@ -101,7 +101,57 @@ export async function getRecentFightsByFighter(fighterId: string | number): Prom
     const data = await res.json();
     console.log('Raw Fights Response:', JSON.stringify(data, null, 2));
     
-    const fights = Array.isArray(data) ? data : (data.fights || data.data || []);
+    const rawFights = Array.isArray(data) ? data : (data.fights || data.data || []);
+    
+    // Transform API format to our Fight type
+    const fights: Fight[] = rawFights.map((fight: any) => {
+      // Determine opponent from fighters object
+      let opponent = '';
+      let result: string = '';
+      
+      if (fight.fighters) {
+        const f1 = fight.fighters.fighter_1;
+        const f2 = fight.fighters.fighter_2;
+        
+        // Check which fighter is our fighter by comparing IDs
+        if (f1?.fighter_id === String(fighterId)) {
+          opponent = f2?.full_name || f2?.name || 'Unknown';
+          result = f1?.winner ? 'win' : f2?.winner ? 'loss' : 'draw';
+        } else {
+          opponent = f1?.full_name || f1?.name || 'Unknown';
+          result = f2?.winner ? 'win' : f1?.winner ? 'loss' : 'draw';
+        }
+      }
+      
+      // Format date nicely
+      let formattedDate = fight.date;
+      if (fight.date) {
+        try {
+          const d = new Date(fight.date);
+          formattedDate = d.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+        } catch {
+          formattedDate = fight.date;
+        }
+      }
+      
+      return {
+        id: fight.id,
+        date: formattedDate,
+        opponent,
+        result: result || fight.results?.outcome || '',
+        method: fight.results?.outcome_long || fight.results?.outcome,
+        round: fight.results?.round,
+        scheduled_rounds: fight.scheduled_rounds,
+        venue: fight.venue,
+        location: fight.location,
+        title_fight: fight.titles && fight.titles.length > 0,
+        division: fight.division,
+      };
+    });
     
     return fights.sort((a: Fight, b: Fight) => {
       if (!a.date) return 1;

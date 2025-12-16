@@ -73,7 +73,7 @@ export async function analyzeFighter(fighter: Fighter, recentFights: Fight[]): P
 
     const data = await res.json();
     const content = data.choices[0]?.message?.content;
-
+    
     if (!content) return null;
 
     // Helper function to extract JSON from potentially wrapped content
@@ -94,7 +94,7 @@ export async function analyzeFighter(fighter: Fighter, recentFights: Fight[]): P
       const cleanedContent = extractJSON(content);
       const analysis = JSON.parse(cleanedContent);
       console.log('Parsed AI Analysis:', analysis);
-
+      
       // Safely extract and validate each field
       const extractArray = (value: any, fallback: string[]): string[] => {
         if (Array.isArray(value)) {
@@ -124,7 +124,7 @@ export async function analyzeFighter(fighter: Fighter, recentFights: Fight[]): P
 
       const strengths = extractArray(analysis.strengths, []);
       const weaknesses = extractArray(analysis.weaknesses, []);
-
+      
       return {
         style: extractString(analysis.style, 'Style analysis not available'),
         strengths: strengths.length > 0 ? strengths : ['Not available'],
@@ -136,7 +136,7 @@ export async function analyzeFighter(fighter: Fighter, recentFights: Fight[]): P
     } catch (e) {
       console.error('Failed to parse Groq response:', e);
       console.error('Raw content:', content);
-
+      
       // Try to extract readable information even if JSON parsing fails
       const readableSummary = content.length > 500 ? content.substring(0, 500) + '...' : content;
       
@@ -184,6 +184,81 @@ export type CompoundAnswer = {
   answer: string;
   sources?: SourceCitation[];
 };
+
+export async function askGeneralQuestion(question: string): Promise<CompoundAnswer | null> {
+  if (!GROQ_API_KEY) {
+    console.error('GROQ_API_KEY is not set');
+    return null;
+  }
+
+  const prompt = `
+    You are an expert boxing analyst with strong general sports knowledge.
+    Answer the question concisely and factually. If the question is about Groq, explain clearly what it is.
+
+    Question: ${question}
+
+    Response guidelines:
+    - Answer directly and succinctly.
+    - If relevant, include notable upcoming fights or recent news.
+    - If citing sources, provide short labels and URLs.
+    - Return ONLY valid JSON with the following structure:
+    {
+      "answer": "direct, concise answer",
+      "sources": [
+        { "label": "Source Name", "url": "https://..." }
+      ]
+    }
+  `;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: 'You are a concise, factual boxing and sports analyst.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.6,
+        max_tokens: 400,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Groq API Error (general):', res.status, err);
+      return null;
+    }
+
+    const data = await res.json();
+    const content = data.choices[0]?.message?.content;
+    if (!content) return null;
+
+    try {
+      const parsed: CompoundAnswer = JSON.parse(content);
+      return {
+        answer: parsed.answer?.trim() || content.trim(),
+        sources: parsed.sources?.map((source) => ({
+          label: source.label,
+          url: source.url,
+        })),
+      };
+    } catch (error) {
+      console.error('Unable to parse general answer JSON:', error);
+      return {
+        answer: (typeof content === 'string' ? content : JSON.stringify(content)).trim(),
+        sources: [],
+      };
+    }
+  } catch (error) {
+    console.error('Error calling Groq for general question:', error);
+    return null;
+  }
+}
 
 export async function askCompoundQuestion(
   fighter: Fighter,

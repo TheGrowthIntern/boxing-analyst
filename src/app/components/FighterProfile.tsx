@@ -21,7 +21,7 @@ export default function FighterProfile({ fighter, fights, insights }: FighterPro
     : null);
 
   return (
-    <div className="mt-4 space-y-6 rounded-xl border border-[var(--neutral-200)] bg-[var(--surface)] p-6">
+    <div className="mt-4 space-y-6 rounded-2xl border border-[var(--neutral-200)] bg-gradient-to-br from-white to-[var(--surface-muted)] p-6 shadow-lg shadow-black/5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -57,14 +57,14 @@ export default function FighterProfile({ fighter, fights, insights }: FighterPro
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Height', value: fighter.height },
           { label: 'Reach', value: fighter.reach },
           { label: 'Stance', value: fighter.stance },
           { label: 'Age', value: age },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-lg bg-[var(--surface-muted)] p-3 text-center">
+              <div key={stat.label} className="rounded-lg bg-white shadow-sm p-3 text-center border border-[var(--neutral-200)]">
             <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--neutral-500)]">{stat.label}</p>
             <p className="mt-1 text-[15px] font-semibold text-[var(--foreground)]">{stat.value || '—'}</p>
           </div>
@@ -109,7 +109,7 @@ export default function FighterProfile({ fighter, fights, insights }: FighterPro
           <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--neutral-500)]">Recent Fights</p>
           <div className="space-y-2">
             {fights.slice(0, 5).map((fight) => (
-              <div key={`fight-${fight.id}`} className="flex items-center justify-between rounded-lg bg-[var(--surface-muted)] px-4 py-3">
+              <div key={`fight-${fight.id}`} className="flex items-center justify-between rounded-lg bg-white px-4 py-3 border border-[var(--neutral-200)] shadow-sm">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-[14px] text-[var(--foreground)]">

@@ -76,31 +76,35 @@ export default function ThinkingSteps({ isSearching, isAnalyzing, isThinking, fi
   if (steps.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <span className="text-[13px] font-medium text-[var(--primary)]">Mayweather</span>
+    <div>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--primary)] mb-1 block">
+        The Bottom Line
+      </span>
       
-      <div className="space-y-1.5">
-        {steps.map((step) => (
-          <div key={step.id} className="flex items-center gap-2">
-            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${
-              step.status === 'active' 
-                ? 'bg-[var(--primary)]' 
-                : step.status === 'complete'
-                ? 'bg-green-500'
-                : 'bg-[var(--neutral-300)]'
-            }`} />
-            <span className={`text-[14px] ${
-              step.status === 'active'
-                ? 'text-[var(--foreground)]'
-                : step.status === 'complete'
-                ? 'text-[var(--neutral-500)]'
-                : 'text-[var(--neutral-400)]'
-            }`}>
-              {step.label}
-              {step.status === 'active' && <LoadingDots />}
-            </span>
-          </div>
-        ))}
+      <div className="rounded-2xl border border-[var(--neutral-200)] bg-white px-4 py-3">
+        <div className="space-y-1.5">
+          {steps.map((step) => (
+            <div key={step.id} className="flex items-center gap-2">
+              <div className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                step.status === 'active' 
+                  ? 'bg-[var(--primary)]' 
+                  : step.status === 'complete'
+                  ? 'bg-green-500'
+                  : 'bg-[var(--neutral-300)]'
+              }`} />
+              <span className={`text-[13px] transition-colors ${
+                step.status === 'active'
+                  ? 'text-[var(--foreground)]'
+                  : step.status === 'complete'
+                  ? 'text-[var(--neutral-500)]'
+                  : 'text-[var(--neutral-400)]'
+              }`}>
+                {step.label}
+                {step.status === 'active' && <LoadingDots />}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

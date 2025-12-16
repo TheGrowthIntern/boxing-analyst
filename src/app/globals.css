@@ -7,9 +7,16 @@
   --surface: #ffffff;
   --surface-muted: #f3f1ec;
   
-  /* Brand */
-  --primary: #e84c30;
-  --primary-dark: #d13d24;
+  /* The Ring Brand Red */
+  --ring-red: #ed1c24;
+  --ring-red-dark: #c91820;
+  --ring-red-glow: rgba(237, 28, 36, 0.15);
+  
+  /* Primary uses Ring Red */
+  --primary: #ed1c24;
+  --primary-dark: #c91820;
+  --groq-orange: #f55036;
+  --groq-glow: rgba(237, 28, 36, 0.12);
   
   /* Neutrals */
   --neutral-50: #faf9f7;
@@ -22,6 +29,9 @@
   --neutral-700: #2d2b28;
   --neutral-800: #1a1917;
   --neutral-900: #0d0c0b;
+  
+  /* Typography */
+  --font-gothic: "hwt-artz", serif;
 }
 
 @theme inline {
@@ -44,6 +54,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Remove default focus outlines */
+input:focus,
+button:focus,
+textarea:focus {
+  outline: none;
 }
 
 /* Custom Scrollbar */
@@ -104,4 +121,260 @@ body {
 
 .animate-bounce-slow {
   animation: bounce 2s ease-in-out infinite;
+}
+
+/* ==========================================
+   CHAT UI ENHANCEMENTS
+   ========================================== */
+
+/* Smooth transitions for all interactive elements */
+button, a, input {
+  transition: all 0.2s ease;
+}
+
+/* Premium scrollbar for chat */
+.chat-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--neutral-200);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-300);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Message animations */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-appear {
+  animation: messageSlideIn 0.3s ease-out forwards;
+}
+
+/* Glassmorphism effect for cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================
+   LANDING PAGE - PROFESSIONAL HERO
+   ========================================== */
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Background gradient */
+.landing-gradient {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(237, 28, 36, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 100% 50%, rgba(237, 28, 36, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 0% 100%, rgba(237, 28, 36, 0.04) 0%, transparent 50%),
+    linear-gradient(180deg, var(--background) 0%, var(--surface-muted) 100%);
+}
+
+/* Subtle noise texture */
+.landing-noise {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  mix-blend-mode: multiply;
+}
+
+/* Center glow effect */
+.landing-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1200px;
+  height: 600px;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(237, 28, 36, 0.06) 0%, transparent 70%);
+}
+
+/* Subtle dot grid */
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, var(--neutral-300) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+}
+
+/* Text gradient for headline */
+.text-gradient {
+  background: linear-gradient(135deg, var(--ring-red) 0%, var(--ring-red-dark) 50%, #a01419 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Feature Cards */
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--neutral-200);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--neutral-300);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.feature-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.05);
+}
+
+/* Shimmer animation for premium feel */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--neutral-200) 0%,
+    var(--neutral-100) 50%,
+    var(--neutral-200) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ==========================================
+   CHAT VIEW BACKGROUND
+   ========================================== */
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Noise texture */
+.app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  mix-blend-mode: multiply;
+}
+
+/* Corner glows */
+.app-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 0% 0%, rgba(237, 28, 36, 0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 100% 100%, rgba(237, 28, 36, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(237, 28, 36, 0.02) 0%, transparent 60%);
+}
+
+/* Subtle grid */
+.app-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    linear-gradient(rgba(237, 28, 36, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 28, 36, 0.015) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.6;
+}
+
+/* Corner rope accents for chat view */
+.app-ropes {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.app-ropes::before {
+  content: '';
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ring-red) 0%, transparent 100%);
+  opacity: 0.08;
+}
+
+.app-ropes::after {
+  content: '';
+  position: absolute;
+  bottom: 80px;
+  right: 0;
+  left: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--ring-red) 100%);
+  opacity: 0.08;
 }
