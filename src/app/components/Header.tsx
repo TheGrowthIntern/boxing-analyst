@@ -2,6 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 
+
 interface HeaderProps {
   /** Error message to display (empty string if no error) */
   error: string;
@@ -25,7 +26,7 @@ export default function Header({ error }: HeaderProps) {
           href="https://console.groq.com/playground"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1.5 rounded-full border border-[var(--neutral-200)] bg-[var(--surface)]/80 backdrop-blur-sm px-3 py-1.5 text-[12px] font-medium text-[var(--neutral-600)] transition-all hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--surface)]"
+          className="flex items-center gap-1.5 rounded-full border border-[var(--neutral-200)] bg-[var(--surface)]/80 backdrop-blur-sm px-3 py-1.5 text-[14px] font-medium text-[var(--neutral-600)] transition-all hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--surface)]"
         >
           Try Groq
           <ExternalLink className="h-3 w-3" />

@@ -116,9 +116,9 @@ export default function ChatInput({
         
         {/* Powered by footer */}
         <div className="mt-2 flex justify-center">
-          <span className="flex items-center gap-1 text-[11px] text-[var(--neutral-400)]">
+          <span className="flex items-center gap-0 text-[11px] text-[var(--neutral-400)]">
             Powered by
-            <GroqLogo width={80} height={24} />
+            <GroqLogo className="scale-[0.5] -ml-4 inline-block" />
           </span>
         </div>
       </form>

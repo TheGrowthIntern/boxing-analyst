@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ExternalLink } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import BoxingRingArt from './BoxingRingArt';
 import GroqLogo from './GroqLogo';
 
@@ -17,9 +17,7 @@ interface LandingPageProps {
 export default function LandingPage({ scrollProgress }: LandingPageProps) {
   return (
     <main className="relative flex min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
-      {/* ─────────────────────────────────────────────────────────────
-          Background Layer
-          ───────────────────────────────────────────────────────────── */}
+      {/* Background Layer */}
       <div className="pointer-events-none absolute inset-0">
         {/* Base background */}
         <div className="absolute inset-0 bg-[var(--background)]" />
@@ -54,13 +52,13 @@ export default function LandingPage({ scrollProgress }: LandingPageProps) {
         <div className="flex flex-1 flex-col justify-center px-4 py-16 md:px-16 lg:px-20 lg:py-0">
           {/* Logo */}
           <div 
-            className="animate-fade-in-up mb-8 mx-auto left-7/12 -translate-x-7/12"
+            className="animate-fade-in-up mb-5 md:mb-6 self-start md:self-start lg:self-center lg:-translate-x-8"
             style={{ animationDelay: '0s', opacity: 0 }}
           >
             <img 
               src="/The_Ring_Logo.png" 
               alt="The Ring" 
-              className="h-40 w-auto"
+              className="h-16 md:h-[72px] -translate-x-30"
             />
           </div>
 
@@ -85,19 +83,20 @@ export default function LandingPage({ scrollProgress }: LandingPageProps) {
           </p>
 
           {/* Partnership */}
-         <div
-            className="animate-fade-in-up mt-8 flex items-center gap-0 text-[13px] text-[var(--neutral-500)]"
-            style={{ animationDelay: "0.15s", opacity: 0 }}
-         >
-            <span className="mr-1">Powered by</span>
-            <GroqLogo className="scale-[0.72] -ml-1 inline-block" />
-         </div>
+          <div
+            className="animate-fade-in-up mt-8 flex items-center gap-1 text-[16px] text-[var(--neutral-500)]"
+            style={{ animationDelay: '0.15s', opacity: 0 }}
+          >
+            <span>Powered by</span>
+            <GroqLogo className="scale-[0.8] -ml-1 inline-block" />
+          </div>
 
           {/* Scroll Indicator */}
           <div
-            className="animate-fade-in-up mt-16 flex items-center gap-3"
+            className="animate-fade-in-up mt-16 flex items-center gap-2"
             style={{ animationDelay: '0.2s', opacity: 0 }}
           >
+            <ChevronDown className="h-5 w-5 text-[var(--neutral-400)]" />
             <span className="text-[12px] font-medium uppercase tracking-widest text-[var(--neutral-400)]">
               Scroll to enter
             </span>
@@ -115,9 +114,7 @@ export default function LandingPage({ scrollProgress }: LandingPageProps) {
         </div>
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────
-          Progress Bar
-          ───────────────────────────────────────────────────────────── */}
+      {/* Progress Bar*/}
       <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--neutral-200)]">
         <div
           className="h-full bg-[var(--ring-red)] transition-all duration-100"

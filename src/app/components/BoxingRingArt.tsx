@@ -353,18 +353,17 @@ type Props = {
           {viaBlock(lid0 - 22, lid0 + lidS + 6, "vBL")}
           {viaBlock(lid0 + lidS + 6, lid0 + lidS + 6, "vBR")}
   
-          {/* Real Groq logo in the middle.*/}
-          <g shapeRendering="auto">
-            <image
-              href="/groqLogos/Bolt + Groq Orange.svg"
-              x={C - 46.4}
-              y={C - 9.6}
-              width={92.8}
-              height={28.8}
-              preserveAspectRatio="xMidYMid meet"
-              opacity="0.16"
-            />
-          </g>
+        {/* Groq mark in the middle (subtler) */}
+        <g shapeRendering="auto" opacity="0.18">
+          <image
+            href="/groqLogos/Bolt + Groq Orange.svg"
+            x={C - 36}
+            y={C - 11}
+            width={72}
+            height={22}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </g>
         </g>
       </svg>
     );
