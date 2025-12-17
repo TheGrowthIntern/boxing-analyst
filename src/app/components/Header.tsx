@@ -3,12 +3,17 @@
 import { ExternalLink } from 'lucide-react';
 
 interface HeaderProps {
+  /** Error message to display (empty string if no error) */
   error: string;
 }
 
+/**
+ * Minimal header with app title and Groq link.
+ * Displays error messages when present.
+ */
 export default function Header({ error }: HeaderProps) {
   return (
-    <header className="relative z-[1] flex items-center justify-between border-b border-[var(--neutral-200)] bg-[var(--surface)]/95 backdrop-blur-sm px-6 py-3">
+    <header className="relative z-[1] flex items-center justify-between px-6 py-4">
       <span className="text-[15px] font-semibold text-[var(--foreground)]">The Bottom Line</span>
       
       <div className="flex items-center gap-4">

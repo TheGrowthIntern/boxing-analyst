@@ -2,19 +2,34 @@
 
 import { ArrowUp, Shuffle, Plus } from 'lucide-react';
 import { Fighter } from '@/lib/types';
+import GroqLogo from './GroqLogo';
 
 interface ChatInputProps {
+  /** Current input value */
   inputValue: string;
+  /** Callback when input changes */
   onInputChange: (value: string) => void;
+  /** Form submission handler */
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  /** Whether input should be disabled (during loading) */
   disabled: boolean;
+  /** Currently selected fighter for context */
   selectedFighter: Fighter | null;
+  /** Fighter context preserved for follow-ups */
   contextFighter: Fighter | null;
+  /** Reset to fresh chat state */
   onNewSearch: () => void;
+  /** Pick a random famous boxer */
   onRandomFighter: () => void;
+  /** Whether this is the initial empty state */
   isInitialState: boolean;
 }
 
+/**
+ * Chat input component with contextual action buttons.
+ * Shows "Surprise me" in initial state, "New chat" after interactions.
+ * Displays dynamic placeholder based on fighter context.
+ */
 export default function ChatInput({ 
   inputValue, 
   onInputChange, 
@@ -26,18 +41,16 @@ export default function ChatInput({
   onRandomFighter,
   isInitialState,
 }: ChatInputProps) {
+  // Derived state
   const hasInput = inputValue.trim().length > 0;
-  
-  // Show "Surprise me" only in initial state (first message)
-  const showDiscover = isInitialState && !hasInput;
-  // Show "New chat" after any interaction
-  const showNew = !isInitialState;
+  const showDiscover = isInitialState && !hasInput; // "Surprise me" button
+  const showNew = !isInitialState; // "New chat" button
   
   return (
-    <div className="relative z-[1] border-t border-[var(--neutral-200)]/50 bg-gradient-to-t from-[var(--surface)] to-[var(--surface)]/95 backdrop-blur-md px-6 py-4">
-      <form onSubmit={onSubmit} className="mx-auto max-w-[720px]">
+    <div className="relative z-[1] px-6 py-6 pointer-events-none">
+      <form onSubmit={onSubmit} className="mx-auto max-w-[720px] pointer-events-auto">
         {/* Main input container */}
-        <div className="relative flex items-center gap-2 rounded-2xl border border-[var(--neutral-200)] bg-white shadow-sm transition-all">
+        <div className="relative flex items-center gap-2 rounded-2xl border border-[var(--neutral-200)] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
           {/* Action buttons inside input */}
           <div className="flex items-center pl-2">
             {showDiscover && (
@@ -102,9 +115,10 @@ export default function ChatInput({
         </div>
         
         {/* Powered by footer */}
-        <div className="mt-2 text-center">
-          <span className="text-[11px] text-[var(--neutral-400)]">
-            Powered by <span className="font-medium text-[var(--primary)]">Groq</span>
+        <div className="mt-2 flex justify-center">
+          <span className="flex items-center gap-1 text-[11px] text-[var(--neutral-400)]">
+            Powered by
+            <GroqLogo width={80} height={24} />
           </span>
         </div>
       </form>
