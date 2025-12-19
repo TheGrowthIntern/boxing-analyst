@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchFighters } from '@/lib/boxingData';
+import { searchFightersWithCompound } from '@/lib/compound';
 
+/**
+ * Search for fighters using Compound Beta
+ * AI-powered boxer search and matching
+ */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get('q');
@@ -10,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const fighters = await searchFighters(query);
+    const fighters = await searchFightersWithCompound(query);
     return NextResponse.json({ fighters });
   } catch (error) {
     console.error('Search error:', error);

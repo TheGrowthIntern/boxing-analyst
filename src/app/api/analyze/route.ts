@@ -1,32 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFighterById, getRecentFightsByFighter } from '@/lib/boxingData';
-import { analyzeFighter } from '@/lib/compound';
+import { getFighterProfileWithCompound } from '@/lib/compound';
 
+/**
+ * Get complete fighter profile using Compound Beta
+ * Generates comprehensive stats, fight history, and AI analysis
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { fighterId } = body;
+    const { fighterId, fighterName } = body;
 
-    if (!fighterId) {
-      return NextResponse.json({ error: 'Missing fighterId' }, { status: 400 });
+    if (!fighterId && !fighterName) {
+      return NextResponse.json({ error: 'Missing fighterId or fighterName' }, { status: 400 });
     }
 
-    // Fetch data in parallel
-    const fighter = await getFighterById(fighterId);
-    
-    if (!fighter) {
-      return NextResponse.json({ error: 'Fighter not found' }, { status: 404 });
-    }
-
-    const fights = await getRecentFightsByFighter(fighterId);
-
-    // Generate insights
-    const insights = await analyzeFighter(fighter, fights);
+    // Get complete profile from Compound Beta
+    const name = fighterName || fighterId;
+    const result = await getFighterProfileWithCompound(name, fighterId);
 
     return NextResponse.json({
-      fighter,
-      fights,
-      insights
+      fighter: result.fighter,
+      fights: result.fights,
+      insights: result.insights
     });
   } catch (error) {
     console.error('Analyze error:', error);

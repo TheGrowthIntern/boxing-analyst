@@ -19,12 +19,12 @@ interface ChatViewProps {
   isLoading: boolean;
   isInitialState: boolean;
   error: string;
+  statusMessage: string;
   bottomRef: RefObject<HTMLDivElement | null>;
   
   // Actions
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  onSelectFighter: (fighter: Fighter) => void;
   onNewSearch: () => void;
   onRandomFighter: () => void;
 }
@@ -44,30 +44,24 @@ export default function ChatView({
   isLoading,
   isInitialState,
   error,
+  statusMessage,
   bottomRef,
   onInputChange,
   onSubmit,
-  onSelectFighter,
   onNewSearch,
   onRandomFighter,
 }: ChatViewProps) {
   return (
     <main className="flex h-screen flex-col bg-[var(--background)] animate-fade-in relative">
-      {/* ─────────────────────────────────────────────────────────────
-          Background Layers
-          ───────────────────────────────────────────────────────────── */}
+      {/*Background Layers*/}
       <div className="app-bg" />
       <div className="app-grid" />
       <div className="app-ropes" />
       
-      {/* ─────────────────────────────────────────────────────────────
-          Header
-          ───────────────────────────────────────────────────────────── */}
-      <Header error={error} />
+      {/* Header */}
+      <Header error={error} status={statusMessage} />
       
-      {/* ─────────────────────────────────────────────────────────────
-          Chat Content Area
-          ───────────────────────────────────────────────────────────── */}
+      {/* Chat Content Area*/}
       <div className="flex min-h-0 flex-1 flex-col relative z-[1]">
         {/* Scrollable Message List */}
         <div className="chat-scroll flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
@@ -82,10 +76,7 @@ export default function ChatView({
                   opacity: 0 
                 }}
               >
-                <ChatMessage 
-                  message={message} 
-                  onSelectFighter={onSelectFighter} 
-                />
+                <ChatMessage message={message} />
               </div>
             ))}
             
@@ -106,9 +97,8 @@ export default function ChatView({
           </div>
         </div>
 
-        {/* ─────────────────────────────────────────────────────────────
-            Input Area
-            ───────────────────────────────────────────────────────────── */}
+        {/*
+            Input Area */}
         <ChatInput
           inputValue={inputValue}
           onInputChange={onInputChange}

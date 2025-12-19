@@ -23,23 +23,23 @@ export default function ThinkingSteps({ isSearching, isAnalyzing, isThinking, fi
   useEffect(() => {
     if (isSearching) {
       setSteps([
-        { id: 'search', label: 'Searching database', status: 'active' },
-        { id: 'match', label: 'Finding matches', status: 'pending' },
+        { id: 'search', label: 'Querying AI for boxer matches', status: 'active' },
+        { id: 'match', label: 'Selecting best match', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else if (isAnalyzing) {
       setSteps([
-        { id: 'fetch', label: `Loading ${fighterName || 'fighter'}`, status: 'active' },
-        { id: 'fights', label: 'Fetching fight history', status: 'pending' },
-        { id: 'analyze', label: 'Generating analysis', status: 'pending' },
+        { id: 'fetch', label: `Generating profile for ${fighterName || 'fighter'}`, status: 'active' },
+        { id: 'fights', label: 'Compiling fight history', status: 'pending' },
+        { id: 'analyze', label: 'Analyzing style & matchups', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else if (isThinking) {
       setSteps([
-        { id: 'context', label: 'Reading context', status: 'active' },
-        { id: 'search', label: 'Searching sources', status: 'pending' },
-        { id: 'analyze', label: 'Analyzing data', status: 'pending' },
-        { id: 'compose', label: 'Composing response', status: 'pending' },
+        { id: 'context', label: 'Reading fighter data', status: 'active' },
+        { id: 'research', label: 'Researching boxing records', status: 'pending' },
+        { id: 'analyze', label: 'Analyzing matchup dynamics', status: 'pending' },
+        { id: 'compose', label: 'Generating answer', status: 'pending' },
       ]);
       setCurrentStepIndex(0);
     } else {
@@ -81,11 +81,11 @@ export default function ThinkingSteps({ isSearching, isAnalyzing, isThinking, fi
         The Bottom Line
       </span>
       
-      <div className="rounded-2xl border border-[var(--neutral-200)] bg-white px-4 py-3">
+      <div className="rounded-[10px] border border-[var(--neutral-200)] bg-white px-4 py-3">
         <div className="space-y-1.5">
           {steps.map((step) => (
             <div key={step.id} className="flex items-center gap-2">
-              <div className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+              <div className={`h-1.5 w-1.5 transition-all duration-300 ${
                 step.status === 'active' 
                   ? 'bg-[var(--primary)]' 
                   : step.status === 'complete'

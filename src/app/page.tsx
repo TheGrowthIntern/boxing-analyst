@@ -12,25 +12,22 @@ import ChatView from './components/ChatView';
  * when the user scrolls or presses a key.
  */
 export default function Home() {
-  // ─────────────────────────────────────────────────────────────────
+
   // Landing Page State
-  // ─────────────────────────────────────────────────────────────────
-  
+
   /** Whether user has entered the chat (past landing page) */
   const [hasEntered, setHasEntered] = useState(false);
   
   /** Scroll progress for landing page animation (0-1) */
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  // ─────────────────────────────────────────────────────────────────
+
   // Chat State (from custom hook)
-  // ─────────────────────────────────────────────────────────────────
   
   const chat = useChat();
 
-  // ─────────────────────────────────────────────────────────────────
+
   // Landing Page Scroll/Keyboard Detection
-  // ─────────────────────────────────────────────────────────────────
   
   useEffect(() => {
     if (hasEntered) return;
@@ -75,9 +72,9 @@ export default function Home() {
     };
   }, [hasEntered]);
 
-  // ─────────────────────────────────────────────────────────────────
+
   // Render
-  // ─────────────────────────────────────────────────────────────────
+
   
   // Show landing page until user enters (via scroll or keyboard)
   if (!hasEntered) {
@@ -98,12 +95,12 @@ export default function Home() {
       isLoading={chat.isLoading}
       isInitialState={chat.isInitialState}
       error={chat.error}
+      statusMessage={chat.statusMessage}
       bottomRef={chat.bottomRef}
       
       // Actions
       onInputChange={chat.setInputValue}
       onSubmit={chat.handleSend}
-      onSelectFighter={chat.handleSelectFighter}
       onNewSearch={chat.handleNewSearch}
       onRandomFighter={chat.handleRandomFighter}
     />

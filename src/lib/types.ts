@@ -8,9 +8,9 @@ export interface Fighter {
   name: string;
   nationality?: string;
   record?: string;
-  height?: string;
-  weight?: string;
-  reach?: string;
+  height?: string | number;
+  weight?: string | number;
+  reach?: string | number;
   stance?: string;
   division?: Division;
   birthdate?: string;

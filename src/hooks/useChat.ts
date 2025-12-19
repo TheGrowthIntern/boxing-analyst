@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Fighter } from '@/lib/types';
+import { Fighter, Fight, Analysis } from '@/lib/types';
 import { type ChatMessage } from '@/app/components/ChatMessage';
 import { WELCOME_MESSAGE, FAMOUS_BOXERS, GENERAL_QUESTION_PATTERN } from '@/lib/constants';
 
@@ -9,6 +9,23 @@ import { WELCOME_MESSAGE, FAMOUS_BOXERS, GENERAL_QUESTION_PATTERN } from '@/lib/
  * Custom hook that manages all chat state and API interactions.
  * Handles fighter search, analysis, and compound questions.
  */
+
+type ProfileCacheEntry = {
+  timestamp: number;
+  fighter: Fighter;
+  fights: Fight[];
+  insights: Analysis | null;
+};
+
+type AnswerCacheEntry = {
+  timestamp: number;
+  answer: string;
+  sources?: { label: string; url: string }[];
+};
+
+const PROFILE_CACHE_TTL = 1000 * 60 * 5;
+const ANSWER_CACHE_TTL = 1000 * 60 * 3;
+
 export function useChat() {
   // ─────────────────────────────────────────────────────────────────
   // State
@@ -34,12 +51,21 @@ export function useChat() {
   
   /** Error message to display */
   const [error, setError] = useState('');
+
+  /** Status message surfaced in the header */
+  const [statusMessage, setStatusMessage] = useState('');
   
   /** Chat message history */
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   
   /** Ref to scroll anchor at bottom of chat */
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  /** Cache for fighter profiles */
+  const profileCacheRef = useRef<Map<string, ProfileCacheEntry>>(new Map());
+
+  /** Cache for QA answers */
+  const answerCacheRef = useRef<Map<string, AnswerCacheEntry>>(new Map());
 
   // ─────────────────────────────────────────────────────────────────
   // Derived State
@@ -74,183 +100,333 @@ export function useChat() {
     setChatHistory((prev) => [...prev, message]);
   }, []);
 
+  /** Fetch helper with retries + basic instrumentation */
+  const fetchJsonWithRetry = useCallback(
+    async (
+      input: RequestInfo | URL,
+      init: RequestInit = {},
+      label: string,
+      retries = 2,
+    ) => {
+      const started = performance.now();
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(input, init);
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `Request failed (${response.status})`);
+          }
+          const data = await response.json();
+          console.log(
+            `[metrics] ${label} completed in ${Math.round(performance.now() - started)}ms (attempt ${
+              attempt + 1
+            })`,
+          );
+          setStatusMessage('');
+          return data;
+        } catch (error) {
+          if (attempt === retries) {
+            throw error;
+          }
+          setStatusMessage(
+            `Retrying ${label.toLowerCase()} (${attempt + 2}/${retries + 1})…`,
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 400 * (attempt + 1)),
+          );
+        }
+      }
+    },
+    [setStatusMessage],
+  );
+
   // ─────────────────────────────────────────────────────────────────
   // API Handlers
   // ─────────────────────────────────────────────────────────────────
   
   /**
-   * Search for fighters by name
+   * Analyze a specific fighter (fetch profile, fights, insights)
+   * Uses Compound Beta to generate comprehensive fighter data
    */
-  const performSearch = useCallback(async (searchTerm: string) => {
-    setIsSearching(true);
-    setError('');
-    setSelectedFighter(null);
+  const handleSelectFighter = useCallback(
+    async (fighter: Fighter) => {
+      const cacheKey = String(fighter.id ?? fighter.name).toLowerCase();
+      const cached = profileCacheRef.current.get(cacheKey);
 
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}`);
-      const data = await res.json();
-      
-      if (data.error) throw new Error(data.error);
-      
-      const fighters: Fighter[] = data.fighters || [];
+      setSelectedFighter(fighter);
+      setContextFighter(fighter);
+      setIsAnalyzing(true);
+      setError('');
+      setStatusMessage(`Loading ${fighter.name}…`);
 
-      if (fighters.length === 0) {
-        setError('No fighters found.');
+      if (
+        cached &&
+        Date.now() - cached.timestamp < PROFILE_CACHE_TTL
+      ) {
+        setSelectedFighter(cached.fighter);
+        setContextFighter(cached.fighter);
+        setIsAnalyzing(false);
+        setStatusMessage('');
+        appendMessage({
+          id: `profile-${fighter.id}-${Date.now()}`,
+          role: 'assistant',
+          content: `Here's the latest profile for ${cached.fighter.name}.`,
+          meta: {
+            fighter: cached.fighter,
+            fights: cached.fights,
+            insights: cached.insights,
+          },
+        });
+        return;
       }
 
-      appendMessage({
-        id: `search-res-${Date.now()}`,
-        role: 'assistant',
-        content: fighters.length
-          ? `Found ${fighters.length} match${fighters.length === 1 ? '' : 'es'} for "${searchTerm}".`
-          : `No results for "${searchTerm}". Try another name.`,
-        meta: { searchResults: fighters },
-      });
-    } catch (err) {
-      setError('Failed to search fighters.');
-      appendMessage({
-        id: `search-error-${Date.now()}`,
-        role: 'assistant',
-        content: 'Something went wrong. Please try again.',
-      });
-      console.error(err);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [appendMessage]);
+      try {
+        const data = await fetchJsonWithRetry(
+          '/api/analyze',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fighterId: fighter.id,
+              fighterName: fighter.name,
+            }),
+          },
+          'Profile',
+          1,
+        );
+
+        if (data.error) throw new Error(data.error);
+
+        const profile: Fighter = data.fighter || fighter;
+        const fights: Fight[] = data.fights || [];
+        const insights: Analysis | null = data.insights || null;
+
+        profileCacheRef.current.set(cacheKey, {
+          timestamp: Date.now(),
+          fighter: profile,
+          fights,
+          insights,
+        });
+
+        setSelectedFighter(profile);
+        setContextFighter(profile);
+
+        appendMessage({
+          id: `profile-${fighter.id}-${Date.now()}`,
+          role: 'assistant',
+          content: `Here's the complete profile for ${profile.name}.`,
+          meta: {
+            fighter: profile,
+            fights,
+            insights,
+          },
+        });
+      } catch (err) {
+        setError('Failed to analyze fighter.');
+        appendMessage({
+          id: `profile-error-${fighter.id}-${Date.now()}`,
+          role: 'assistant',
+          content: 'Could not load fighter profile. Try another selection.',
+        });
+        console.error(err);
+      } finally {
+        setIsAnalyzing(false);
+        setStatusMessage('');
+      }
+    },
+    [appendMessage, fetchJsonWithRetry],
+  );
 
   /**
-   * Analyze a specific fighter (fetch profile, fights, insights)
+   * Search for fighters by name and auto-select the top match
    */
-  const handleSelectFighter = useCallback(async (fighter: Fighter) => {
-    // Add user message showing selection
-    appendMessage({
-      id: `user-select-${fighter.id}-${Date.now()}`,
-      role: 'user',
-      content: fighter.name,
-    });
+  const performSearch = useCallback(
+    async (searchTerm: string) => {
+      setIsSearching(true);
+      setError('');
+      setSelectedFighter(null);
+      setStatusMessage(`Searching for “${searchTerm}”…`);
 
-    setSelectedFighter(fighter);
-    setContextFighter(fighter);
-    setIsAnalyzing(true);
-    setError('');
+      try {
+        const data = await fetchJsonWithRetry(
+          `/api/search?q=${encodeURIComponent(searchTerm)}`,
+          undefined,
+          'Search',
+          1,
+        );
+        
+        if (data.error) throw new Error(data.error);
+        
+        const fighters: Fighter[] = data.fighters || [];
 
-    try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fighterId: fighter.id }),
-      });
-      const data = await res.json();
-      
-      if (data.error) throw new Error(data.error);
-      
-      const profile: Fighter = data.fighter || fighter;
-      setSelectedFighter(profile);
-      setContextFighter(profile);
+        if (fighters.length === 0) {
+          setError(`Couldn't find "${searchTerm}". Try another boxer's name.`);
+          appendMessage({
+            id: `search-error-${Date.now()}`,
+            role: 'assistant',
+            content: `I couldn't find a boxer named "${searchTerm}". Try a different name or double-check the spelling.`,
+          });
+          setStatusMessage('');
+          setIsSearching(false);
+          return;
+        }
 
-      appendMessage({
-        id: `profile-${fighter.id}-${Date.now()}`,
-        role: 'assistant',
-        content: `Here's the complete profile for ${profile.name}.`,
-        meta: {
-          fighter: profile,
-          fights: data.fights || [],
-          insights: data.insights || null,
-        },
-      });
-    } catch (err) {
-      setError('Failed to analyze fighter.');
-      appendMessage({
-        id: `profile-error-${fighter.id}-${Date.now()}`,
-        role: 'assistant',
-        content: 'Could not load fighter profile. Try another selection.',
-      });
-      console.error(err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [appendMessage]);
+        const topMatch = fighters[0];
+        await handleSelectFighter(topMatch);
+      } catch (err) {
+        setError('Failed to search fighters.');
+        appendMessage({
+          id: `search-error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Something went wrong while searching. Please try again.',
+        });
+        console.error(err);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [appendMessage, fetchJsonWithRetry, handleSelectFighter],
+  );
 
   /**
    * Ask a follow-up question about the current fighter context
+   * Sends fighter data directly to avoid redundant API lookups
    */
-  const sendCompoundQuestion = useCallback(async (questionText: string) => {
-    const targetFighter = selectedFighter || contextFighter;
-    if (!targetFighter) return;
-    
-    setIsCompoundLoading(true);
-    
-    try {
-      const res = await fetch('/api/compound', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fighterId: targetFighter.id,
-          question: questionText,
-        }),
-      });
-      const data = await res.json();
+  const sendCompoundQuestion = useCallback(
+    async (questionText: string) => {
+      const targetFighter = selectedFighter || contextFighter;
+      if (!targetFighter) return;
       
-      if (!res.ok) {
-        throw new Error(data.error || 'Compound question failed');
+      const cacheKey = `${targetFighter.id ?? targetFighter.name}|${questionText.toLowerCase()}`;
+      const cached = answerCacheRef.current.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < ANSWER_CACHE_TTL) {
+        appendMessage({
+          id: `compound-res-${Date.now()}`,
+          role: 'assistant',
+          content: cached.answer,
+          meta: { sources: cached.sources },
+        });
+        return;
       }
 
-      appendMessage({
-        id: `compound-res-${Date.now()}`,
-        role: 'assistant',
-        content: data.answer || 'Could not generate an answer.',
-        meta: { sources: data.sources },
-      });
-    } catch (err) {
-      appendMessage({
-        id: `compound-error-${Date.now()}`,
-        role: 'assistant',
-        content: 'Could not process your question. Try again.',
-      });
-      console.error(err);
-    } finally {
-      setIsCompoundLoading(false);
-    }
-  }, [selectedFighter, contextFighter, appendMessage]);
+      setIsCompoundLoading(true);
+      setStatusMessage('Answering via Compound…');
+      
+      try {
+        // Find the most recent fighter profile message to get fights data
+        const profileMessage = [...chatHistory].reverse().find(
+          (msg) => msg.meta?.fighter?.id === targetFighter.id,
+        );
+        const fights = profileMessage?.meta?.fights || [];
+
+        const data = await fetchJsonWithRetry(
+          '/api/compound',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fighterId: targetFighter.id,
+              fighterName: targetFighter.name,
+              fighter: targetFighter,
+              fights,
+              question: questionText,
+            }),
+          },
+          'Answer',
+        );
+        
+        if (data.error) throw new Error(data.error);
+
+        answerCacheRef.current.set(cacheKey, {
+          timestamp: Date.now(),
+          answer: data.answer || 'Could not generate an answer.',
+          sources: data.sources,
+        });
+
+        appendMessage({
+          id: `compound-res-${Date.now()}`,
+          role: 'assistant',
+          content: data.answer || 'Could not generate an answer.',
+          meta: { sources: data.sources },
+        });
+      } catch (err) {
+        appendMessage({
+          id: `compound-error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Could not process your question. Try again.',
+        });
+        console.error(err);
+      } finally {
+        setIsCompoundLoading(false);
+        setStatusMessage('');
+      }
+    },
+    [selectedFighter, contextFighter, chatHistory, appendMessage, fetchJsonWithRetry],
+  );
 
   /**
    * Ask a general question (not about a specific fighter)
    */
-  const sendGeneralQuestion = useCallback(async (questionText: string) => {
-    setIsCompoundLoading(true);
-    
-    try {
-      const res = await fetch('/api/compound/general', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: questionText }),
-      });
-      const data = await res.json();
+  const sendGeneralQuestion = useCallback(
+    async (questionText: string) => {
+      const normalized = questionText.trim().toLowerCase();
+      const cacheKey = `general|${normalized}`;
+      const cached = answerCacheRef.current.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < ANSWER_CACHE_TTL) {
+        appendMessage({
+          id: `general-res-${Date.now()}`,
+          role: 'assistant',
+          content: cached.answer,
+          meta: { sources: cached.sources },
+        });
+        return;
+      }
+
+      setIsCompoundLoading(true);
+      setStatusMessage('Answering via Compound…');
       
-      if (!res.ok) throw new Error(data.error || 'General question failed');
+      try {
+        const data = await fetchJsonWithRetry(
+          '/api/compound/general',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: questionText }),
+          },
+          'General answer',
+        );
+        
+        if (data.error) throw new Error(data.error);
 
-      appendMessage({
-        id: `general-res-${Date.now()}`,
-        role: 'assistant',
-        content: data.answer || 'Could not generate an answer.',
-        meta: { sources: data.sources },
-      });
-    } catch (err) {
-      appendMessage({
-        id: `general-error-${Date.now()}`,
-        role: 'assistant',
-        content: 'Could not process your question. Try again.',
-      });
-      console.error(err);
-    } finally {
-      setIsCompoundLoading(false);
-    }
-  }, [appendMessage]);
+        answerCacheRef.current.set(cacheKey, {
+          timestamp: Date.now(),
+          answer: data.answer || 'Could not generate an answer.',
+          sources: data.sources,
+        });
 
-  // ─────────────────────────────────────────────────────────────────
+        appendMessage({
+          id: `general-res-${Date.now()}`,
+          role: 'assistant',
+          content: data.answer || 'Could not generate an answer.',
+          meta: { sources: data.sources },
+        });
+      } catch (err) {
+        appendMessage({
+          id: `general-error-${Date.now()}`,
+          role: 'assistant',
+          content: 'Could not process your question. Try again.',
+        });
+        console.error(err);
+      } finally {
+        setIsCompoundLoading(false);
+        setStatusMessage('');
+      }
+    },
+    [appendMessage, fetchJsonWithRetry],
+  );
+
+
   // User Actions
-  // ─────────────────────────────────────────────────────────────────
   
   /**
    * Handle form submission - routes to appropriate handler
@@ -321,9 +497,8 @@ export function useChat() {
     await performSearch(randomName);
   }, [appendMessage, performSearch]);
 
-  // ─────────────────────────────────────────────────────────────────
-  // Return
-  // ─────────────────────────────────────────────────────────────────
+ 
+  // Return all the state and actions
   
   return {
     // State
@@ -339,6 +514,7 @@ export function useChat() {
     isInitialState,
     error,
     bottomRef,
+    statusMessage,
     
     // Actions
     handleSend,

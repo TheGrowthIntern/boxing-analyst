@@ -52,13 +52,13 @@ export default function LandingPage({ scrollProgress }: LandingPageProps) {
         <div className="flex flex-1 flex-col justify-center px-4 py-16 md:px-16 lg:px-20 lg:py-0">
           {/* Logo */}
           <div 
-            className="animate-fade-in-up mb-5 md:mb-6 self-start md:self-start lg:self-center lg:-translate-x-8"
+            className="animate-fade-in-up mb-5 md:mb-6 self-start -ml-2 md:-ml-4 lg:-ml-10"
             style={{ animationDelay: '0s', opacity: 0 }}
           >
             <img 
               src="/The_Ring_Logo.png" 
               alt="The Ring" 
-              className="h-16 md:h-[72px] -translate-x-30"
+              className="h-[100px] md:h-[128px]"
             />
           </div>
 
@@ -79,7 +79,7 @@ export default function LandingPage({ scrollProgress }: LandingPageProps) {
             className="animate-fade-in-up mt-6 max-w-md text-[16px] leading-relaxed text-[var(--neutral-500)] md:text-[17px]"
             style={{ animationDelay: '0.1s', opacity: 0 }}
           >
-            Scout fighters, preview matchups, and get instant AI-powered analysis on any boxer in history.
+            Groq × The Ring delivers instant scouting reports, matchup previews, and tactical breakdowns inspired by the sport’s most trusted voices.
           </p>
 
           {/* Partnership */}

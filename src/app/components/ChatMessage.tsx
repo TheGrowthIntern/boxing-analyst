@@ -1,5 +1,4 @@
 import { Fighter, Fight, Analysis } from '@/lib/types';
-import SearchResults from './SearchResults';
 import FighterProfile from './FighterProfile';
 import SourcePills from './SourcePills';
 import MarkdownText from './MarkdownText';
@@ -28,8 +27,6 @@ export type ChatMessage = {
 interface ChatMessageProps {
   /** The message to render */
   message: ChatMessage;
-  /** Callback when user selects a fighter from search results */
-  onSelectFighter: (fighter: Fighter) => void;
 }
 
 /**
@@ -37,13 +34,13 @@ interface ChatMessageProps {
  * User messages appear as colored bubbles on the right.
  * Assistant messages include rich content like fighter profiles.
  */
-export default function ChatMessage({ message, onSelectFighter }: ChatMessageProps) {
+export default function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl bg-[var(--primary)] px-4 py-2.5 shadow-md shadow-orange-500/20">
+      <div className="flex justify-end px-1">
+        <div className="max-w-[78%] rounded-[10px] bg-[var(--groq-orange)] px-4.5 py-3 shadow-lg shadow-[var(--groq-orange)]/25">
           <p className="text-[14px] leading-relaxed text-white">{message.content}</p>
         </div>
       </div>
@@ -51,17 +48,13 @@ export default function ChatMessage({ message, onSelectFighter }: ChatMessagePro
   }
 
   return (
-    <div>
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--primary)] mb-2 block opacity-80">
-        The Bottom Line
-      </span>
+      <div className="space-y-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--primary)] opacity-80">
+          Groq Analyst
+        </span>
       
-      <div className="rounded-2xl border border-[var(--neutral-200)] bg-white/80 backdrop-blur-sm px-5 py-4 shadow-sm">
+      <div className="rounded-[10px] border border-[var(--neutral-200)]/80 bg-white/85 backdrop-blur-sm px-6 py-5 shadow-[0_12px_45px_rgba(0,0,0,0.08)] space-y-4">
         <MarkdownText content={message.content} />
-
-        {message.meta?.searchResults && message.meta.searchResults.length > 0 && (
-          <SearchResults fighters={message.meta.searchResults} onSelectFighter={onSelectFighter} />
-        )}
 
         {message.meta?.fighter && (
           <FighterProfile

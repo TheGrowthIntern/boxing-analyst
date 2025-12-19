@@ -8,18 +8,7 @@
  */
 export const FAMOUS_BOXERS = [
   // Legends
-  'Muhammad Ali',
   'Mike Tyson',
-  'Sugar Ray Leonard',
-  'George Foreman',
-  'Joe Frazier',
-  'Larry Holmes',
-  'Marvin Hagler',
-  'Thomas Hearns',
-  'Roberto Duran',
-  'Julio Cesar Chavez',
-  'Lennox Lewis',
-  'Evander Holyfield',
   
   // Modern Era
   'Floyd Mayweather',
@@ -52,7 +41,7 @@ export const FAMOUS_BOXERS = [
 export const WELCOME_MESSAGE = {
   id: 'welcome',
   role: 'assistant' as const,
-  content: 'Search for any boxer to explore their stats, fight history, and AI-powered analysis.',
+  content: 'Welcome to Groq Analyst. Ask about any fighter or storyline and I\'ll respond with Groq × The Ring insight.',
 };
 
 /**

@@ -1,30 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFighterById, getRecentFightsByFighter } from '@/lib/boxingData';
-import { askCompoundQuestion } from '@/lib/compound';
+import { askCompoundQuestion, getFighterProfileWithCompound } from '@/lib/compound';
+import { Fighter, Fight } from '@/lib/types';
 
+/**
+ * Ask a question about a fighter using Compound Beta
+ * Accepts fighter context or fetches it dynamically
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { fighterId, question } = body;
-
-    if (!fighterId) {
-      return NextResponse.json({ error: 'Missing fighterId' }, { status: 400 });
-    }
+    const { fighterId, fighterName, question, fighter: providedFighter, fights: providedFights } = body;
 
     if (!question || typeof question !== 'string' || question.trim().length === 0) {
       return NextResponse.json({ error: 'Missing question text' }, { status: 400 });
     }
 
-    const fighter = await getFighterById(fighterId);
-    if (!fighter) {
-      return NextResponse.json({ error: 'Fighter not found' }, { status: 404 });
+    let fighter: Fighter;
+    let fights: Fight[];
+
+    // Use provided data if available, otherwise generate fighter profile
+    if (providedFighter) {
+      fighter = providedFighter;
+      fights = providedFights || [];
+    } else {
+      // Generate fighter profile with AI
+      const name = fighterName || fighterId;
+      if (!name) {
+        return NextResponse.json({ error: 'Missing fighter identifier' }, { status: 400 });
+      }
+      
+      const profile = await getFighterProfileWithCompound(name, fighterId);
+      fighter = profile.fighter;
+      fights = profile.fights;
     }
 
-    const fights = await getRecentFightsByFighter(fighterId);
     const reply = await askCompoundQuestion(fighter, fights, question.trim());
 
     if (!reply) {
-      return NextResponse.json({ error: 'Compound Beta did not return a response' }, { status: 502 });
+      return NextResponse.json({ error: 'Failed to generate answer' }, { status: 502 });
     }
 
     return NextResponse.json({
@@ -32,8 +45,9 @@ export async function POST(request: NextRequest) {
       sources: reply.sources ?? [],
     });
   } catch (error) {
-    console.error('Compound question error:', error);
+    console.error('Question processing error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
 
