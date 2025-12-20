@@ -7,6 +7,10 @@ import ChatMessage, { type ChatMessage as ChatMessageType } from './ChatMessage'
 import ChatInput from './ChatInput';
 import ThinkingSteps from './ThinkingSteps';
 
+// Animation constants
+const MESSAGE_ANIMATION_DELAY_MS = 30; // Delay per message index
+const MAX_ANIMATION_DELAY_MS = 150; // Maximum total delay
+
 interface ChatViewProps {
   // State
   chatHistory: ChatMessageType[];
@@ -72,7 +76,7 @@ export default function ChatView({
                 key={message.id} 
                 className="animate-slide-in"
                 style={{ 
-                  animationDelay: `${Math.min(index * 30, 150)}ms`, 
+                  animationDelay: `${Math.min(index * MESSAGE_ANIMATION_DELAY_MS, MAX_ANIMATION_DELAY_MS)}ms`, 
                   opacity: 0 
                 }}
               >

@@ -5,6 +5,10 @@ import { useChat } from '@/hooks/useChat';
 import LandingPage from './components/LandingPage';
 import ChatView from './components/ChatView';
 
+// Landing page scroll constants
+const SCROLL_THRESHOLD = 150; // Pixels to scroll before entering chat
+const ENTRY_DELAY_MS = 200; // Delay before transitioning to chat after keyboard shortcut
+
 /**
  * Main page component.
  * 
@@ -33,7 +37,6 @@ export default function Home() {
     if (hasEntered) return;
 
     let accumulatedScroll = 0;
-    const threshold = 150;
 
     /**
      * Track scroll wheel to animate progress bar and trigger entry
@@ -41,7 +44,7 @@ export default function Home() {
     const handleWheel = (e: WheelEvent) => {
       if (e.deltaY > 0) {
         accumulatedScroll += e.deltaY;
-        const progress = Math.min(accumulatedScroll / threshold, 1);
+        const progress = Math.min(accumulatedScroll / SCROLL_THRESHOLD, 1);
         setScrollProgress(progress);
         
         if (progress >= 1) {
@@ -49,7 +52,7 @@ export default function Home() {
         }
       } else {
         accumulatedScroll = Math.max(0, accumulatedScroll + e.deltaY);
-        setScrollProgress(Math.min(accumulatedScroll / threshold, 1));
+        setScrollProgress(Math.min(accumulatedScroll / SCROLL_THRESHOLD, 1));
       }
     };
 
@@ -59,7 +62,7 @@ export default function Home() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter') {
         setScrollProgress(1);
-        setTimeout(() => setHasEntered(true), 200);
+        setTimeout(() => setHasEntered(true), ENTRY_DELAY_MS);
       }
     };
 

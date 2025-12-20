@@ -41,7 +41,7 @@ export const FAMOUS_BOXERS = [
 export const WELCOME_MESSAGE = {
   id: 'welcome',
   role: 'assistant' as const,
-  content: 'Welcome to Groq Analyst. Ask about any fighter or storyline and I\'ll respond with Groq × The Ring insight.',
+  content: 'Welcome to Groq Analyst. Ask about any fighter or storyline and I\'ll respond with stats from Groq\'s Compound Model System',
 };
 
 /**

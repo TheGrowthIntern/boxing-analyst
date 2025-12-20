@@ -4,6 +4,9 @@ import { searchFightersWithCompound } from '@/lib/compound';
 /**
  * Search for fighters using Compound Beta
  * AI-powered boxer search and matching
+ * 
+ * @param request - Next.js request with query parameter 'q' (search term)
+ * @returns Array of matching fighters
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

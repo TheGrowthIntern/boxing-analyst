@@ -4,6 +4,9 @@ import { getFighterProfileWithCompound } from '@/lib/compound';
 /**
  * Get complete fighter profile using Compound Beta
  * Generates comprehensive stats, fight history, and AI analysis
+ * 
+ * @param request - Next.js request with body containing fighterId or fighterName
+ * @returns Fighter profile with stats, fights, and insights
  */
 export async function POST(request: NextRequest) {
   try {

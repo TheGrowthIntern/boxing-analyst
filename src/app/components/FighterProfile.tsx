@@ -1,5 +1,6 @@
 import { Fighter, Fight, Analysis } from '@/lib/types';
 import { renderFightBadge } from '@/lib/utils';
+import SourcePills from './SourcePills';
 
 interface FighterProfileProps {
   fighter: Fighter;
@@ -8,7 +9,9 @@ interface FighterProfileProps {
 }
 
 /**
- * Helper: Format dates to readable "Month Day, Year" format
+ * Formats dates to readable "Month Day, Year" format
+ * @param input - Date string to format
+ * @returns Formatted date string or "Date unknown" if invalid
  */
 const formatDate = (input?: string) => {
   if (!input) return 'Date unknown';
@@ -24,17 +27,9 @@ const formatDate = (input?: string) => {
 };
 
 /**
- * FighterProfile Component
- * 
- * Displays a comprehensive fighter card including:
- * - Fighter name, alias, nationality, and division
- * - Record badge with wins-losses-draws
- * - Physical stats (height, reach, stance, age)
- * - Recent fight history
- * - AI-generated tactical analysis (strengths, weaknesses, matchups)
- */
-/**
- * Helper: Format height - handles both string and number inputs
+ * Formats height from cm to readable format (feet and inches)
+ * @param height - Height in cm (number) or already formatted string
+ * @returns Formatted string like "5'6" (168cm)" or null if invalid
  */
 const formatHeight = (height: string | number | undefined): string | null => {
   if (!height) return null;
@@ -48,7 +43,9 @@ const formatHeight = (height: string | number | undefined): string | null => {
 };
 
 /**
- * Helper: Format reach - handles both string and number inputs
+ * Formats reach from cm to readable format (inches)
+ * @param reach - Reach in cm (number) or already formatted string
+ * @returns Formatted string like "66" (168cm)" or null if invalid
  */
 const formatReach = (reach: string | number | undefined): string | null => {
   if (!reach) return null;
@@ -60,16 +57,29 @@ const formatReach = (reach: string | number | undefined): string | null => {
   return `${inches}" (${cm}cm)`;
 };
 
-export default function FighterProfile({ fighter, fights, insights }: FighterProfileProps) {
-  // Calculate record display
-  const record = fighter.record || (fighter.wins !== undefined && fighter.losses !== undefined
-    ? `${fighter.wins}-${fighter.losses}${fighter.draws ? `-${fighter.draws}` : ''}`
-    : null);
+/**
+ * FighterProfile Component
+ * 
+ * Displays a comprehensive fighter card including:
+ * - Fighter name, alias, nationality, and division
+ * - Record badge with wins-losses-draws
+ * - Physical stats (height, reach, stance, age)
+ * - Recent fight history
+ * - AI-generated tactical analysis (strengths, weaknesses, matchups)
+ */
 
+export default function FighterProfile({ fighter, fights, insights }: FighterProfileProps) {
   // Parse wins/losses/draws for extended color coding
   const wins = fighter.wins ?? 0;
   const losses = fighter.losses ?? 0;
   const draws = fighter.draws ?? 0;
+  
+  // Calculate record display - prefer API record, fallback to calculated
+  // The API should now return normalized records, but we validate here too
+  const calculatedRecord = `${wins}-${losses}${draws > 0 ? `-${draws}` : ''}`;
+  const record = fighter.record && fighter.record === calculatedRecord 
+    ? fighter.record 
+    : calculatedRecord;
 
   const koPercentage = fighter.ko_percentage || (fighter.knockouts && fighter.wins 
     ? Math.round((fighter.knockouts / fighter.wins) * 100) 
@@ -184,8 +194,8 @@ export default function FighterProfile({ fighter, fights, insights }: FighterPro
         <div className="space-y-3">
           <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--neutral-500)]">Recent Fights</p>
           <div className="space-y-2">
-            {fights.slice(0, 5).map((fight) => (
-              <div key={`fight-${fight.id}`} className="flex items-center justify-between rounded-[10px] bg-white px-4 py-3 border border-[var(--neutral-200)] shadow-sm">
+            {fights.slice(0, 5).map((fight, index) => (
+              <div key={`fight-${fight.id || fight.date || index}-${index}`} className="flex items-center justify-between rounded-[10px] bg-white px-4 py-3 border border-[var(--neutral-200)] shadow-sm">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-[14px] text-[var(--foreground)]">
@@ -260,12 +270,19 @@ export default function FighterProfile({ fighter, fights, insights }: FighterPro
               )}
               {insights.matchups && (
                 <div>
-                  <p className="text-[12px] font-medium text-[var(--foreground)]">Strategic Notes</p>
-                  <p className="mt-1 text-[13px] text-[var(--neutral-500)]">{insights.matchups}</p>
+                  <p className="text-[12px] font-medium text-[var(--foreground)]">Matchup Strategy</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-[var(--neutral-500)]">{insights.matchups}</p>
                 </div>
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sources */}
+      {fighter.sources && fighter.sources.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-[var(--neutral-200)]">
+          <SourcePills sources={fighter.sources} />
         </div>
       )}
     </div>

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { askGeneralQuestion } from '@/lib/compound';
 
+/**
+ * Ask a general boxing question (not fighter-specific)
+ * Uses Compound Beta for intelligent Q&A about boxing news, upcoming fights, etc.
+ * 
+ * @param request - Next.js request with body containing question text
+ * @returns Answer with optional sources
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

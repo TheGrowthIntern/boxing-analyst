@@ -5,6 +5,9 @@ import { Fighter, Fight } from '@/lib/types';
 /**
  * Ask a question about a fighter using Compound Beta
  * Accepts fighter context or fetches it dynamically
+ * 
+ * @param request - Next.js request with body containing question and optional fighter data
+ * @returns Answer with optional sources
  */
 export async function POST(request: NextRequest) {
   try {

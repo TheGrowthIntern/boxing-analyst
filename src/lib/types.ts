@@ -30,6 +30,7 @@ export interface Fighter {
   titles?: string[];
   ranking?: number;
   status?: string;
+  sources?: { label: string; url: string }[];
 }
 
 export interface Fight {

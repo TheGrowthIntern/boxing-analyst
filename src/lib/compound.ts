@@ -25,10 +25,18 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'groq/compound';
 const GROQ_FAST_MODEL = 'groq/compound-mini'; // Fast model for search
 
+// Timeout constants (in milliseconds)
+const SEARCH_TIMEOUT_MS = 10000; // 10 seconds for search operations
+const PROFILE_TIMEOUT_MS = 15000; // 15 seconds for profile generation
+const QUESTION_TIMEOUT_MS = 30000; // 30 seconds for Q&A operations
+
 /**
  * Search for fighters by name using fast Groq model
- * Uses llama-3.3-70b-versatile for quick responses
+ * Uses compound-mini for quick responses
  * Returns a list of fighters with basic info
+ * 
+ * @param searchQuery - Fighter name or search term
+ * @returns Array of matching fighters with basic info
  */
 export async function searchFightersWithCompound(searchQuery: string): Promise<Fighter[]> {
   if (!GROQ_API_KEY) {
@@ -41,7 +49,7 @@ export async function searchFightersWithCompound(searchQuery: string): Promise<F
   try {
     // Use AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -105,6 +113,10 @@ export async function searchFightersWithCompound(searchQuery: string): Promise<F
 /**
  * Get complete fighter profile with stats and recent fights
  * Uses fast model for quick data retrieval
+ * 
+ * @param fighterName - Name of the fighter to look up
+ * @param fighterId - Optional fighter ID for caching
+ * @returns Fighter profile with stats, fights, and AI analysis
  */
 export async function getFighterProfileWithCompound(fighterName: string, fighterId?: string): Promise<{
   fighter: Fighter;
@@ -120,12 +132,12 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
     };
   }
 
-  const prompt = `Boxing profile for ${fighterName}. JSON: {fighter:{id,name,nationality,birthplace,age,record,wins,losses,draws,knockouts,ko_percentage,height,reach,stance,division:{name},alias,debut,status,titles[]},recentFights:[{id,date,opponent,result,method,round,location,title_fight}],analysis:{style,strengths[],weaknesses[],recentForm,matchups,summary}}. 6-8 fights max. Factual data.`;
+  const prompt = `Boxing profile for ${fighterName}. Return accurate, verified data. JSON: {fighter:{id,name,nationality,birthplace,age,record:"W-L-D" format matching wins/losses/draws exactly,wins:number,losses:number,draws:number,knockouts,ko_percentage,height,reach,stance,division:{name},alias,debut,status,titles[]},recentFights:[{id,date,opponent,result,method,round,location,title_fight}],analysis:{style,strengths[],weaknesses[],recentForm,matchups:"General strategic approach and ideal opponent types (not specific names)",summary},sources:[{label:"Source Name",url:"https://..."}]}. CRITICAL: Record must match wins-losses-draws exactly. matchups should describe general strategy (e.g., "Excels against technical boxers; struggles with power punchers") NOT specific opponent names. 6-8 fights max. Include authoritative sources.`;
 
   try {
     // Use AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), PROFILE_TIMEOUT_MS);
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -173,6 +185,30 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
       
       // Extract fighter data
       const fighterData = parsed.fighter || {};
+      
+      // Normalize wins, losses, draws to numbers
+      const wins = Number(fighterData.wins) || 0;
+      const losses = Number(fighterData.losses) || 0;
+      const draws = Number(fighterData.draws) || 0;
+      
+      // Validate and normalize record string
+      let record = fighterData.record || '';
+      const expectedRecord = `${wins}-${losses}${draws > 0 ? `-${draws}` : ''}`;
+      
+      // If record doesn't match, use calculated record
+      if (record && record !== expectedRecord) {
+        console.warn(`Record mismatch for ${fighterName}: "${record}" vs calculated "${expectedRecord}". Using calculated.`);
+        record = expectedRecord;
+      } else if (!record) {
+        record = expectedRecord;
+      }
+      
+      // Extract sources
+      const sources = parsed.sources || [];
+      const normalizedSources = sources
+        .filter((s: any) => s.label && s.url)
+        .map((s: any) => ({ label: s.label, url: s.url }));
+      
       const fighter: Fighter = {
         id: fighterData.id || fighterId || fighterName.toLowerCase().replace(/\s+/g, '-'),
         name: fighterData.name || fighterName,
@@ -180,10 +216,10 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
         birthplace: fighterData.birthplace || '',
         birthdate: fighterData.birthdate || '',
         age: fighterData.age,
-        record: fighterData.record || '',
-        wins: fighterData.wins,
-        losses: fighterData.losses,
-        draws: fighterData.draws,
+        record,
+        wins,
+        losses,
+        draws,
         knockouts: fighterData.knockouts,
         ko_percentage: fighterData.ko_percentage,
         height: fighterData.height || '',
@@ -194,21 +230,34 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
         debut: fighterData.debut || '',
         status: fighterData.status || '',
         titles: fighterData.titles || [],
+        sources: normalizedSources.length > 0 ? normalizedSources : undefined,
       };
 
       // Extract fights
       const fightsData = parsed.recentFights || parsed.fights || [];
-      const fights: Fight[] = fightsData.map((f: any, idx: number) => ({
-        id: f.id || `fight-${idx}`,
-        date: f.date || '',
-        opponent: f.opponent || 'Unknown',
-        result: f.result || 'unknown',
-        method: f.method || '',
-        round: f.round,
-        location: f.location || '',
-        title_fight: f.title_fight || false,
-        notes: f.notes || '',
-      }));
+      const fights: Fight[] = fightsData.map((f: any, idx: number) => {
+        // Generate unique ID: use provided ID, or create from date+opponent, or use index
+        let fightId = f.id;
+        if (!fightId || fightId === 'N/A' || fightId === 'unknown') {
+          const opponentName = typeof f.opponent === 'string' ? f.opponent : f.opponent?.name || 'Unknown';
+          const dateStr = f.date ? f.date.replace(/-/g, '') : '';
+          fightId = dateStr && opponentName !== 'Unknown' 
+            ? `${dateStr}-${opponentName.toLowerCase().replace(/\s+/g, '-')}-${idx}`
+            : `fight-${fighterName.toLowerCase().replace(/\s+/g, '-')}-${idx}`;
+        }
+        
+        return {
+          id: fightId,
+          date: f.date || '',
+          opponent: f.opponent || 'Unknown',
+          result: f.result || 'unknown',
+          method: f.method || '',
+          round: f.round,
+          location: f.location || '',
+          title_fight: f.title_fight || false,
+          notes: f.notes || '',
+        };
+      });
 
       // Extract analysis
       const analysisData = parsed.analysis || {};
@@ -426,6 +475,13 @@ export type CompoundAnswer = {
   sources?: SourceCitation[];
 };
 
+/**
+ * Ask a general boxing question (not fighter-specific)
+ * Uses Compound Beta for intelligent Q&A
+ * 
+ * @param question - General question about boxing, upcoming fights, or Groq
+ * @returns Answer with optional sources, or null on error
+ */
 export async function askGeneralQuestion(question: string): Promise<CompoundAnswer | null> {
   if (!GROQ_API_KEY) {
     console.error('GROQ_API_KEY is not set');
@@ -452,6 +508,10 @@ export async function askGeneralQuestion(question: string): Promise<CompoundAnsw
   `;
 
   try {
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), QUESTION_TIMEOUT_MS);
+
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -467,7 +527,10 @@ export async function askGeneralQuestion(question: string): Promise<CompoundAnsw
         temperature: 0.6,
         max_tokens: 400,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const err = await res.text();
@@ -495,12 +558,25 @@ export async function askGeneralQuestion(question: string): Promise<CompoundAnsw
         sources: [],
       };
     }
-  } catch (error) {
-    console.error('Error calling Groq for general question:', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('General question timeout - request took too long');
+    } else {
+      console.error('Error calling Groq for general question:', error);
+    }
     return null;
   }
 }
 
+/**
+ * Ask a question about a specific fighter using their profile and fight history
+ * Uses Compound Beta for contextual, data-driven answers
+ * 
+ * @param fighter - Fighter profile with stats and metadata
+ * @param recentFights - Recent fight history for context
+ * @param question - Question about the fighter
+ * @returns Answer with optional sources, or null on error
+ */
 export async function askCompoundQuestion(
   fighter: Fighter,
   recentFights: Fight[],
@@ -522,11 +598,11 @@ export async function askCompoundQuestion(
     ${buildFightsText(recentFights) || 'No recent fight data available.'}
 
     Question: ${question}
-    The system should analyze the provided fighter statistics and generate a direct, data-driven answer to the user’s question.
+    The system should analyze the provided fighter statistics and generate a direct, data-driven answer to the user's question.
 
     Response guidelines:
     - Always answer the question explicitly and directly.
-    - Use the fighter’s stats (height, reach, stance, record, style, etc.) to support reasoning.
+    - Use the fighter's stats (height, reach, stance, record, style, etc.) to support reasoning.
     - Include relevant context or interpretation about fighting styles, strengths, weaknesses, and matchup tendencies.
     - Keep the tone analytical and grounded in data, not speculative or opinionated.
     - You may reference comparative insights (e.g., ideal opponents, problem matchups) if it helps answer the question, but do not force a specific format or section structure.
@@ -542,6 +618,10 @@ export async function askCompoundQuestion(
   `;
 
   try {
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), QUESTION_TIMEOUT_MS);
+
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -557,7 +637,10 @@ export async function askCompoundQuestion(
         temperature: 0.65,
         max_tokens: 400,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const err = await res.text();
@@ -586,8 +669,12 @@ export async function askCompoundQuestion(
         sources: [],
       };
     }
-  } catch (error) {
-    console.error('Error calling Groq for question:', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('Compound question timeout - request took too long');
+    } else {
+      console.error('Error calling Groq for compound question:', error);
+    }
     return null;
   }
 }
