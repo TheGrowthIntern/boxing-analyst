@@ -26,8 +26,9 @@ const GROQ_MODEL = 'groq/compound';
 const GROQ_FAST_MODEL = 'groq/compound-mini'; // Fast model for search
 
 // Timeout constants (in milliseconds)
-const SEARCH_TIMEOUT_MS = 10000; // 10 seconds for search operations
-const PROFILE_TIMEOUT_MS = 15000; // 15 seconds for profile generation
+// Note: Compound models can be slow on first request due to cold starts
+const SEARCH_TIMEOUT_MS = 20000; // 20 seconds for search operations (increased from 10)
+const PROFILE_TIMEOUT_MS = 25000; // 25 seconds for profile generation (increased from 15)
 const QUESTION_TIMEOUT_MS = 30000; // 30 seconds for Q&A operations
 
 /**
@@ -132,7 +133,7 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
     };
   }
 
-  const prompt = `Boxing profile for ${fighterName}. Return accurate, verified data. JSON: {fighter:{id,name,nationality,birthplace,age,record:"W-L-D" format matching wins/losses/draws exactly,wins:number,losses:number,draws:number,knockouts,ko_percentage,height,reach,stance,division:{name},alias,debut,status,titles[]},recentFights:[{id,date,opponent,result,method,round,location,title_fight}],analysis:{style,strengths[],weaknesses[],recentForm,matchups:"General strategic approach and ideal opponent types (not specific names)",summary},sources:[{label:"Source Name",url:"https://..."}]}. CRITICAL: Record must match wins-losses-draws exactly. matchups should describe general strategy (e.g., "Excels against technical boxers; struggles with power punchers") NOT specific opponent names. 6-8 fights max. Include authoritative sources.`;
+  const prompt = `Boxing profile for ${fighterName}. JSON: {fighter:{id,name,nationality,birthplace,age,record:"W-L-D",wins:number,losses:number,draws:number,knockouts,ko_percentage,height,reach,stance,division:{name},alias,debut,status,titles[]},recentFights:[{id,date,opponent,result,method,round,location,title_fight}],analysis:{style,strengths[],weaknesses[],recentForm,matchups,summary}}. Record must match wins-losses-draws. 6-8 fights. Factual data only.`;
 
   try {
     // Use AbortController for timeout
@@ -173,6 +174,7 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
     const data = await res.json();
     const content = data.choices[0]?.message?.content;
     if (!content) {
+      console.error('Groq Profile Error: No content in response', data);
       return {
         fighter: { id: fighterId || 'unknown', name: fighterName },
         fights: [],
@@ -273,6 +275,7 @@ export async function getFighterProfileWithCompound(fighterName: string, fighter
       return { fighter, fights, insights };
     } catch (e) {
       console.error('Failed to parse fighter profile:', e);
+      console.error('Raw content that failed to parse:', content?.substring(0, 500));
       return {
         fighter: { id: fighterId || 'unknown', name: fighterName },
         fights: [],
